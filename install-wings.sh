@@ -55,7 +55,7 @@ fi
 
 # download URLs
 WINGS_DL_URL="https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_amd64"
-GITHUB_BASE_URL="https://raw.githubusercontent.com/vilhelmprytz/pterodactyl-installer/$GITHUB_SOURCE"
+GITHUB_BASE_URL="https://raw.githubusercontent.com/arvati/pterodactyl-installer/$GITHUB_SOURCE"
 
 COLOR_RED='\033[0;31m'
 COLOR_NC='\033[0m'
@@ -194,6 +194,9 @@ check_os_comp() {
     [ "$OS_VER_MAJOR" == "7" ] && SUPPORTED=true
     [ "$OS_VER_MAJOR" == "8" ] && SUPPORTED=true
     ;;
+  ol)
+    [ "$OS_VER_MAJOR" == "8" ] && SUPPORTED=true
+    ;;
   *)
     SUPPORTED=false
     ;;
@@ -220,7 +223,7 @@ check_os_comp() {
 
     # unsilence
     unset DEBIAN_FRONTEND
-  elif [ "$OS" == "centos" ]; then
+  elif [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
     if [ "$OS_VER_MAJOR" == "7" ]; then
       yum -q -y update
 
@@ -310,7 +313,7 @@ install_docker() {
     # Make sure docker is enabled
     enable_docker
 
-  elif [ "$OS" == "centos" ]; then
+  elif [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
     if [ "$OS_VER_MAJOR" == "7" ]; then
       # Install dependencies for Docker
       yum install -y yum-utils device-mapper-persistent-data lvm2
@@ -364,7 +367,7 @@ install_mariadb() {
     curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
     apt update && apt install mariadb-server -y
     ;;
-  centos)
+  centos | ol)
     [ "$OS_VER_MAJOR" == "7" ] && curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
     [ "$OS_VER_MAJOR" == "7" ] && yum -y install mariadb-server
     [ "$OS_VER_MAJOR" == "8" ] && dnf install -y mariadb mariadb-server
@@ -445,7 +448,7 @@ letsencrypt() {
   # Install certbot
   if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
     apt-get install certbot -y
-  elif [ "$OS" == "centos" ]; then
+  elif [ "$OS" == "centos" ] || [ "$OS" == "centos" ]; then
     [ "$OS_VER_MAJOR" == "7" ] && yum install certbot
     [ "$OS_VER_MAJOR" == "8" ] && dnf install certbot
   else
@@ -476,7 +479,7 @@ perform_install() {
   echo "* Installing pterodactyl wings.."
   [ "$OS" == "ubuntu" ] || [ "$OS" == "debian" ] && apt_update
   [ "$OS" == "centos" ] && [ "$OS_VER_MAJOR" == "7" ] && yum_update
-  [ "$OS" == "centos" ] && [ "$OS_VER_MAJOR" == "8" ] && dnf_update
+  [ "$OS" == "centos" ] || [ "$OS" == "ol" ] && [ "$OS_VER_MAJOR" == "8" ] && dnf_update
   [ "$CONFIGURE_UFW" == true ] && firewall_ufw
   [ "$CONFIGURE_FIREWALL_CMD" == true ] && firewall_firewalld
   install_docker
@@ -549,7 +552,7 @@ main() {
   fi
 
   # Firewall-cmd is available for CentOS
-  if [ "$OS" == "centos" ]; then
+  if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
     echo -e -n "* Do you want to automatically configure firewall-cmd (firewall)? (y/N): "
     read -r CONFIRM_FIREWALL_CMD
 

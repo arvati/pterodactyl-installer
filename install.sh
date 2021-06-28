@@ -28,7 +28,8 @@ set -e
 #                                                                           #
 #############################################################################
 
-SCRIPT_VERSION="v0.6.0"
+#SCRIPT_VERSION="v0.6.0"
+SCRIPT_VERSION="master"
 
 # exit with error status code if user is not root
 if [[ $EUID -ne 0 ]]; then
@@ -39,7 +40,7 @@ fi
 # check for curl
 if ! [ -x "$(command -v curl)" ]; then
   echo "* curl is required in order for this script to work."
-  echo "* install using apt (Debian and derivatives) or yum/dnf (CentOS)"
+  echo "* install using apt (Debian and derivatives) or yum/dnf (CentOS and Oracle Linux)"
   exit 1
 fi
 
@@ -69,53 +70,37 @@ output "This script is not associated with the official Pterodactyl Project."
 output
 
 panel() {
-  bash <(curl -s https://raw.githubusercontent.com/vilhelmprytz/pterodactyl-installer/$SCRIPT_VERSION/install-panel.sh)
+  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/$SCRIPT_VERSION/install-panel.sh)
 }
 
 wings() {
-  bash <(curl -s https://raw.githubusercontent.com/vilhelmprytz/pterodactyl-installer/$SCRIPT_VERSION/install-wings.sh)
+  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/$SCRIPT_VERSION/install-wings.sh)
 }
 
 legacy_panel() {
-  bash <(curl -s https://raw.githubusercontent.com/vilhelmprytz/pterodactyl-installer/$SCRIPT_VERSION/legacy/panel_0.7.sh)
+  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/$SCRIPT_VERSION/legacy/panel_0.7.sh)
 }
 
 legacy_wings() {
-  bash <(curl -s https://raw.githubusercontent.com/vilhelmprytz/pterodactyl-installer/$SCRIPT_VERSION/legacy/daemon_0.6.sh)
+  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/$SCRIPT_VERSION/legacy/daemon_0.6.sh)
 }
 
 canary_panel() {
-  bash <(curl -s https://raw.githubusercontent.com/vilhelmprytz/pterodactyl-installer/master/install-panel.sh)
+  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/master/install-panel.sh)
 }
 
 canary_wings() {
-  bash <(curl -s https://raw.githubusercontent.com/vilhelmprytz/pterodactyl-installer/master/install-wings.sh)
+  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/master/install-wings.sh)
 }
 
 while [ "$done" == false ]; do
   options=(
-    "Install the panel"
-    "Install Wings"
-    "Install both [0] and [1] on the same machine (wings script runs after panel)\n"
-
-    "Install 0.7 version of panel (unsupported, no longer maintained!)"
-    "Install 0.6 version of daemon (works with panel 0.7, no longer maintained!)"
-    "Install both [3] and [4] on the same machine (daemon script runs after panel)\n"
-
     "Install panel with canary version of the script (the versions that lives in master, may be broken!)"
     "Install Wings with canary version of the script (the versions that lives in master, may be broken!)"
-    "Install both [5] and [6] on the same machine (wings script runs after panel)"
+    "Install both [0] and [1] on the same machine (wings script runs after panel)"
   )
 
   actions=(
-    "panel"
-    "wings"
-    "panel; wings"
-
-    "legacy_panel"
-    "legacy_wings"
-    "legacy_panel; legacy_wings"
-
     "canary_panel"
     "canary_wings"
     "canary_panel; canary_wings"

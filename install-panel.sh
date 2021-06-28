@@ -72,7 +72,7 @@ CONFIGURE_LETSENCRYPT=false
 
 # download URLs
 PANEL_DL_URL="https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz"
-GITHUB_BASE_URL="https://raw.githubusercontent.com/vilhelmprytz/pterodactyl-installer/$GITHUB_SOURCE"
+GITHUB_BASE_URL="https://raw.githubusercontent.com/arvati/pterodactyl-installer/$GITHUB_SOURCE"
 
 # ufw firewall
 CONFIGURE_UFW=false
@@ -246,7 +246,7 @@ ask_firewall() {
       CONFIGURE_FIREWALL=true
     fi
     ;;
-  centos)
+  centos | ol)
     echo -e -n "* Do you want to automatically configure firewall-cmd (firewall)? (y/N): "
     read -r CONFIRM_FIREWALL_CMD
 
@@ -328,6 +328,10 @@ check_os_comp() {
     [ "$OS_VER_MAJOR" == "7" ] && SUPPORTED=true
     [ "$OS_VER_MAJOR" == "8" ] && SUPPORTED=true
     ;;
+  ol)
+    PHP_SOCKET="/var/run/php-fpm/pterodactyl.sock"
+    [ "$OS_VER_MAJOR" == "8" ] && SUPPORTED=true
+    ;;
   *)
     SUPPORTED=false
     ;;
@@ -364,6 +368,7 @@ ptdl_dl() {
 
   cp .env.example .env
   [ "$OS" == "centos" ] && export PATH=/usr/local/bin:$PATH
+  [ "$OS" == "ol" ] && export PATH=/usr/local/bin:$PATH
   COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader
 
   php artisan key:generate --force
@@ -372,7 +377,7 @@ ptdl_dl() {
 
 # Create a databse with user
 create_database() {
-  if [ "$OS" == "centos" ]; then
+  if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
     # secure MariaDB
     echo "* MariaDB secure installation. The following are safe defaults."
     echo "* Set root password? [Y/n] Y"
@@ -464,7 +469,7 @@ set_folder_permissions() {
   debian | ubuntu)
     chown -R www-data:www-data ./*
     ;;
-  centos)
+  centos | ol)
     chown -R nginx:nginx ./*
     ;;
   esac
@@ -491,12 +496,12 @@ install_pteroq() {
   debian | ubuntu)
     sed -i -e "s@<user>@www-data@g" /etc/systemd/system/pteroq.service
     ;;
-  centos)
+  centos | ol)
     sed -i -e "s@<user>@nginx@g" /etc/systemd/system/pteroq.service
     ;;
   esac
 
-  systemctl enable pteroq.service
+  systemctl enable --now pteroq.service
   systemctl start pteroq
 
   echo "* Installed pteroq!"
@@ -526,7 +531,7 @@ enable_services_debian_based() {
 enable_services_centos_based() {
   systemctl enable mariadb
   systemctl enable nginx
-  systemctl enable redis
+  systemctl enable --now redis
   systemctl start mariadb
   systemctl start redis
 }
@@ -694,9 +699,46 @@ centos8_dep() {
   echo "* Dependencies for CentOS installed!"
 }
 
+ol8_dep() {
+  echo "* Installing dependencies for Oracle Linux 8.."
+
+  # SELinux tools
+  dnf install -y setroubleshoot-server setools mcstrans
+
+  # add remi repo (php8.0)
+  dnf install -y epel-release http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+  #dnf module enable php:remi-7.4
+  dnf module enable -y php:remi-8.0
+  dnf_update -y
+
+  #dnf install -y php php-{common,fpm,cli,json,mysqlnd,gd,mbstring,pdo,zip,bcmath,dom,opcache}
+  dnf install -y php php-common php-fpm php-cli php-json php-mysqlnd php-gd php-mbstring php-pdo php-zip php-bcmath php-dom php-opcache
+
+  # MariaDB (use from official repo)
+  dnf install -y mariadb mariadb-server
+
+  # Other dependencies
+  dnf install -y nginx git redis
+
+  # Enable services
+  enable_services_centos_based
+
+  # SELinux (allow nginx and redis)
+  selinux_allow
+
+  echo "* Dependencies for CentOS installed!"
+}
+
 ##### OTHER OS SPECIFIC FUNCTIONS #####
 
 centos_php() {
+  curl -o /etc/php-fpm.d/www-pterodactyl.conf $GITHUB_BASE_URL/configs/www-pterodactyl.conf
+
+  systemctl enable php-fpm
+  systemctl start php-fpm
+}
+
+ol_php() {
   curl -o /etc/php-fpm.d/www-pterodactyl.conf $GITHUB_BASE_URL/configs/www-pterodactyl.conf
 
   systemctl enable php-fpm
@@ -721,7 +763,7 @@ firewall_ufw() {
 
 firewall_firewalld() {
   echo -e "\n* Enabling firewall_cmd (firewalld)"
-  echo "* Opening port 22 (SSH), 80 (HTTP) and 443 (HTTPS)"
+  echo "* Opening port 22 (SSH), 80 (HTTP) and 443 (HTTPS) and 3306 (mysql)"
 
   # Install
   [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install firewalld >/dev/null
@@ -734,6 +776,7 @@ firewall_firewalld() {
   firewall-cmd --add-service=http --permanent -q  # Port 80
   firewall-cmd --add-service=https --permanent -q # Port 443
   firewall-cmd --add-service=ssh --permanent -q   # Port 22
+  firewall-cmd --add-service=mysql --permanent -q # Port 3306
   firewall-cmd --reload -q                        # Enable firewall
 
   echo "* Firewall-cmd installed"
@@ -748,7 +791,7 @@ letsencrypt() {
   debian | ubuntu)
     apt-get -y install certbot python3-certbot-nginx
     ;;
-  centos)
+  centos | ol)
     [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install certbot python-certbot-nginx
     [ "$OS_VER_MAJOR" == "8" ] && dnf -y -q install certbot python3-certbot-nginx
     ;;
@@ -785,7 +828,7 @@ configure_nginx() {
     DL_FILE="nginx.conf"
   fi
 
-  if [ "$OS" == "centos" ]; then
+  if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
     # remove default config
     rm -rf /etc/nginx/conf.d/default
 
@@ -853,9 +896,19 @@ perform_install() {
     [ "$OS_VER_MAJOR" == "7" ] && centos7_dep
     [ "$OS_VER_MAJOR" == "8" ] && centos8_dep
     ;;
+
+  ol)
+    [ "$OS_VER_MAJOR" == "8" ] && dnf_update
+
+    [ "$CONFIGURE_FIREWALL_CMD" == true ] && firewall_firewalld
+
+    [ "$OS_VER_MAJOR" == "8" ] && ol8_dep
+    ;;
+
   esac
 
   [ "$OS" == "centos" ] && centos_php
+  [ "$OS" == "ol" ] && ol_php
   install_composer
   ptdl_dl
   create_database

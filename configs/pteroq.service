@@ -3,7 +3,7 @@
 
 [Unit]
 Description=Pterodactyl Queue Worker
-After=redis-server.service
+After=redis.service
 
 [Service]
 # On some systems the user and group might be different.
