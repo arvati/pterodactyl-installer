@@ -380,19 +380,16 @@ install_mariadb() {
   ubuntu | debian)
     curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
     apt update && apt install mariadb-server -y
-    systemctl enable mariadb ; systemctl start mariadb
     ;;
-  centos)
+  centos | ol)
     [ "$OS_VER_MAJOR" == "7" ] && curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
     [ "$OS_VER_MAJOR" == "7" ] && yum -y install mariadb-server
     [ "$OS_VER_MAJOR" == "8" ] && dnf install -y mariadb mariadb-server
-    systemctl enable mariadb ; systemctl start mariadb
-    ;;
-  ol)
-    dnf install -y mysql mysql-server
-    systemctl enable mysqld ; systemctl start mysqld
+    #dnf install -y mysql mysql-server
+    #systemctl enable mysqld ; systemctl start mysqld
     ;;
   esac
+  systemctl enable mariadb ; systemctl start mariadb
 }
 
 #################################
