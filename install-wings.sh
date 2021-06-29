@@ -123,6 +123,20 @@ hyperlink() {
   echo -e "\e]8;;${1}\a${1}\e]8;;\a"
 }
 
+required_input() {
+  local __resultvar=$1
+  local result=''
+
+  while [ -z "$result" ]; do
+    echo -n "* ${2}"
+    read -r result
+
+    [ -z "$result" ] && print_error "${3}"
+  done
+
+  eval "$__resultvar="'$result'""
+}
+
 #################################
 ####### OS check funtions #######
 #################################
@@ -366,16 +380,19 @@ install_mariadb() {
   ubuntu | debian)
     curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
     apt update && apt install mariadb-server -y
+    systemctl enable mariadb ; systemctl start mariadb
     ;;
-  centos | ol)
+  centos)
     [ "$OS_VER_MAJOR" == "7" ] && curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
     [ "$OS_VER_MAJOR" == "7" ] && yum -y install mariadb-server
     [ "$OS_VER_MAJOR" == "8" ] && dnf install -y mariadb mariadb-server
+    systemctl enable mariadb ; systemctl start mariadb
+    ;;
+  ol)
+    dnf install -y mysql mysql-server
+    systemctl enable mysqld ; systemctl start mysqld
     ;;
   esac
-
-  systemctl enable mariadb
-  systemctl start mariadb
 }
 
 #################################
@@ -448,9 +465,9 @@ letsencrypt() {
   # Install certbot
   if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
     apt-get install certbot -y
-  elif [ "$OS" == "centos" ] || [ "$OS" == "centos" ]; then
-    [ "$OS_VER_MAJOR" == "7" ] && yum install certbot
-    [ "$OS_VER_MAJOR" == "8" ] && dnf install certbot
+  elif [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
+    [ "$OS_VER_MAJOR" == "7" ] && yum install certbot python3-certbot-nginx
+    [ "$OS_VER_MAJOR" == "8" ] && dnf install certbot python3-certbot-nginx
   else
     # exit
     print_error "OS not supported."
@@ -468,6 +485,23 @@ letsencrypt() {
   # Check if it succeded
   if [ ! -d "/etc/letsencrypt/live/$FQDN/" ] || [ "$FAILED" == true ]; then
     print_warning "The process of obtaining a Let's Encrypt certificate failed!"
+    print_warning "You need to provide cloudflare Token, Account and Zone ID for acme.sh generate SSL certificate."
+    echo -n "* Try with acme.sh? (y/N): "
+    read -r ACMESH
+    if [[ "$ACMESH" =~ [Yy] ]]; then
+      required_input CF_Token "Cloudflare Token: " "Token cannot be empty"
+      required_input CF_Account_ID "Cloudflare Account ID: " "Account cannot be empty"
+      required_input CF_Zone_ID "Cloudflare Zone ID: " "Zone cannot be empty"
+      curl https://get.acme.sh | sh -s email="$EMAIL"
+      mkdir -p "/etc/letsencrypt/live/$FQDN/"
+      FAILED=false
+      acme.sh --issue --dns dns_cf -d "$FQDN" \
+          --key-file "/etc/letsencrypt/live/$FQDN/privkey.pem" \
+          --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem" || FAILED=true
+      [ ! -d "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && FAILED=true
+    else
+      FAILED=true
+    fi
   fi
 }
 
