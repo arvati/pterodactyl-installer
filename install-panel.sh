@@ -678,8 +678,7 @@ centos8_dep() {
   dnf install -y policycoreutils selinux-policy selinux-policy-targeted setroubleshoot-server setools setools-console mcstrans
 
   # add remi repo (php8.0)
-  dnf install -y epel-release
-  dnf install -y https://rpms.remirepo.net/enterprise/remi-release-8.rpm
+  dnf install -y epel-release http://rpms.remirepo.net/enterprise/remi-release-8.rpm
   dnf module enable -y php:remi-8.0
   dnf_update
 
@@ -707,7 +706,8 @@ ol8_dep() {
   dnf install -y setroubleshoot-server setools mcstrans
 
   # add remi repo (php8.0)
-  dnf install -y epel-release http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+  dnf install -y oracle-epel-release-el8
+  dnf install -y http://rpms.remirepo.net/enterprise/remi-release-8.rpm
   #dnf module enable php:remi-7.4
   dnf module enable -y php:remi-8.0
   dnf_update -y
@@ -982,11 +982,11 @@ main() {
   echo "* List of valid timezones here $(hyperlink "https://www.php.net/manual/en/timezones.php")"
 
   while [ -z "$timezone" ]; do
-    echo -n "* Select timezone [Europe/Stockholm]: "
+    echo -n "* Select timezone [America/Sao_Paulo]: "
     read -r timezone_input
 
     array_contains_element "$timezone_input" "${valid_timezones[@]}" && timezone="$timezone_input"
-    [ -z "$timezone_input" ] && timezone="Europe/Stockholm" # because köttbullar!
+    [ -z "$timezone_input" ] && timezone="America/Sao_Paulo"
   done
 
   email_input email "Provide the email address that will be used to configure Let's Encrypt and Pterodactyl: " "Email cannot be empty or invalid"
