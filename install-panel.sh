@@ -706,7 +706,7 @@ ol8_dep() {
   dnf install -y setroubleshoot-server setools mcstrans
 
   # add remi repo (php8.0)
-  dnf install -y oracle-epel-release-el8
+  dnf install -y oracle-epel-release-el8 https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
   dnf install -y http://rpms.remirepo.net/enterprise/remi-release-8.rpm
   #dnf module enable php:remi-7.4
   dnf module enable -y php:remi-8.0
