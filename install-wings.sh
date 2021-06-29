@@ -464,10 +464,10 @@ letsencrypt() {
 
   # Install certbot
   if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
-    apt-get install certbot -y
+    apt-get -y install certbot python3-certbot-nginx socat
   elif [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
-    [ "$OS_VER_MAJOR" == "7" ] && yum install certbot python3-certbot-nginx
-    [ "$OS_VER_MAJOR" == "8" ] && dnf install certbot python3-certbot-nginx
+    [ "$OS_VER_MAJOR" == "7" ] && yum install certbot python3-certbot-nginx socat
+    [ "$OS_VER_MAJOR" == "8" ] && dnf install certbot python3-certbot-nginx socat
   else
     # exit
     print_error "OS not supported."
@@ -492,10 +492,9 @@ letsencrypt() {
       required_input CF_Token "Cloudflare Token: " "Token cannot be empty"
       required_input CF_Account_ID "Cloudflare Account ID: " "Account cannot be empty"
       required_input CF_Zone_ID "Cloudflare Zone ID: " "Zone cannot be empty"
-      curl https://get.acme.sh | sh -s email="$EMAIL"
-      mkdir -p "/etc/letsencrypt/live/$FQDN/"
       FAILED=false
-      acme.sh --issue --dns dns_cf -d "$FQDN" \
+      mkdir -p "/etc/letsencrypt/live/$FQDN/"
+      curl https://get.acme.sh | sh -s email="$EMAIL" --issue --dns dns_cf -d "$FQDN" \
           --key-file "/etc/letsencrypt/live/$FQDN/privkey.pem" \
           --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem" || FAILED=true
       [ ! -d "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && FAILED=true

@@ -795,11 +795,11 @@ letsencrypt() {
   # Install certbot
   case "$OS" in
   debian | ubuntu)
-    apt-get -y install certbot python3-certbot-nginx
+    apt-get -y install certbot python3-certbot-nginx socat
     ;;
   centos | ol)
-    [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install certbot python-certbot-nginx
-    [ "$OS_VER_MAJOR" == "8" ] && dnf -y -q install certbot python3-certbot-nginx
+    [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install certbot python-certbot-nginx socat
+    [ "$OS_VER_MAJOR" == "8" ] && dnf -y -q install certbot python3-certbot-nginx socat
     ;;
   esac
 
@@ -817,9 +817,9 @@ letsencrypt() {
       required_input CF_Account_ID "Cloudflare Account ID: " "Account cannot be empty"
       required_input CF_Zone_ID "Cloudflare Zone ID: " "Zone cannot be empty"
       curl https://get.acme.sh | sh -s email="$email"
-      mkdir -p "/etc/letsencrypt/live/$FQDN/"
       FAILED=false
-      acme.sh --issue --dns dns_cf -d "$FQDN" \
+      mkdir -p "/etc/letsencrypt/live/$FQDN/"
+      curl https://get.acme.sh | sh -s email="$EMAIL" --issue --dns dns_cf -d "$FQDN" \
           --key-file "/etc/letsencrypt/live/$FQDN/privkey.pem" \
           --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem" || FAILED=true
       [ ! -d "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && FAILED=true
