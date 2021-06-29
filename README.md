@@ -34,6 +34,8 @@ List of supported installation setups for panel and Wings (installations support
 | CentOS           | 6       | :red_circle:       |             |
 |                  | 7       | :white_check_mark: | 8.0         |
 |                  | 8       | :white_check_mark: | 8.0         |
+| Oracle Linux     | 7       | :red_circle:       |             |
+|                  | 8       | :white_check_mark: | 8.0         |
 
 ### Supported Wings operating systems
 

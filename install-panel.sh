@@ -678,7 +678,8 @@ centos8_dep() {
   dnf install -y policycoreutils selinux-policy selinux-policy-targeted setroubleshoot-server setools setools-console mcstrans
 
   # add remi repo (php8.0)
-  dnf install -y epel-release http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+  dnf install -y epel-release
+  dnf install -y https://rpms.remirepo.net/enterprise/remi-release-8.rpm
   dnf module enable -y php:remi-8.0
   dnf_update
 
