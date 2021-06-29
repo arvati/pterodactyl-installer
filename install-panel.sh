@@ -219,6 +219,14 @@ ask_letsencrypt() {
   read -r CONFIRM_SSL
 
   if [[ "$CONFIRM_SSL" =~ [Yy] ]]; then
+    case "$OS" in
+    ol)
+      print_warning "You need to provide cloudflare Token, Account and Zone ID for acme.sh generate SSL certificate."
+      required_input CF_Token "Cloudflare Token: " "Token cannot be empty"
+      required_input CF_Account_ID "Cloudflare Account ID: " "Account cannot be empty"
+      required_input CF_Zone_ID "Cloudflare Zone ID: " "Zone cannot be empty"
+      ;;
+    esac
     CONFIGURE_LETSENCRYPT=true
     ASSUME_SSL=false
   fi
@@ -791,15 +799,29 @@ letsencrypt() {
   case "$OS" in
   debian | ubuntu)
     apt-get -y install certbot python3-certbot-nginx
+    ACMESH=false
     ;;
-  centos | ol)
+  centos)
     [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install certbot python-certbot-nginx
     [ "$OS_VER_MAJOR" == "8" ] && dnf -y -q install certbot python3-certbot-nginx
+    ACMESH=false
+    ;;
+  ol)
+    ACMESH=true
+    curl https://get.acme.sh | sh -s email="$email"
     ;;
   esac
 
   # Obtain certificate
-  certbot --nginx --redirect --no-eff-email --email "$email" -d "$FQDN" || FAILED=true
+  if [ $ACMESH == false ]; then
+    certbot --nginx --redirect --no-eff-email --email "$email" -d "$FQDN" || FAILED=true
+  else
+    mkdir -p "/etc/letsencrypt/live/$FQDN/"
+    acme.sh --issue --dns dns_cf -d "$FQDN" \
+          --key-file "/etc/letsencrypt/live/$FQDN/privkey.pem" \
+          --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem" || FAILED=true
+    [ ! -d "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && FAILED=true
+  fi
 
   # Check if it succeded
   if [ ! -d "/etc/letsencrypt/live/$FQDN/" ] || [ "$FAILED" == true ]; then
