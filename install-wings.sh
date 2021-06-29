@@ -466,8 +466,8 @@ letsencrypt() {
   if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
     apt-get -y install certbot python3-certbot-nginx socat
   elif [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
-    [ "$OS_VER_MAJOR" == "7" ] && yum install certbot python3-certbot-nginx socat
-    [ "$OS_VER_MAJOR" == "8" ] && dnf install certbot python3-certbot-nginx socat
+    [ "$OS_VER_MAJOR" == "7" ] && yum -y install certbot python3-certbot-nginx socat
+    [ "$OS_VER_MAJOR" == "8" ] && dnf -y install certbot python3-certbot-nginx socat
   else
     # exit
     print_error "OS not supported."

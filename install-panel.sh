@@ -535,7 +535,8 @@ enable_services_centos_based() {
 }
 
 enable_services_ol_based() {
-  systemctl enable mysqld ; systemctl start mysqld
+  #systemctl enable mysqld ; systemctl start mysqld
+  systemctl enable mariadb ; systemctl start mariadb
   systemctl enable nginx
   systemctl enable --now redis ; systemctl start redis
 }
@@ -720,8 +721,8 @@ ol8_dep() {
   dnf install -y php php-common php-fpm php-cli php-json php-mysqlnd php-gd php-mbstring php-pdo php-zip php-bcmath php-dom php-opcache
 
   # MariaDB (use from official repo)
-  #dnf install -y mariadb mariadb-server
-  dnf install -y mysql mysql-server
+  dnf install -y mariadb mariadb-server
+  #dnf install -y mysql mysql-server
 
   # Other dependencies
   dnf install -y nginx git redis
@@ -773,8 +774,8 @@ firewall_firewalld() {
   echo "* Opening port 22 (SSH), 80 (HTTP) and 443 (HTTPS) and 3306 (mysql)"
 
   # Install
-  [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install firewalld >/dev/null
-  [ "$OS_VER_MAJOR" == "8" ] && dnf -y -q install firewalld >/dev/null
+  [ "$OS_VER_MAJOR" == "7" ] && yum -y install firewalld >/dev/null
+  [ "$OS_VER_MAJOR" == "8" ] && dnf -y install firewalld >/dev/null
 
   # Enable
   systemctl --now enable firewalld >/dev/null # Enable and start
@@ -798,8 +799,8 @@ letsencrypt() {
     apt-get -y install certbot python3-certbot-nginx socat
     ;;
   centos | ol)
-    [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install certbot python-certbot-nginx socat
-    [ "$OS_VER_MAJOR" == "8" ] && dnf -y -q install certbot python3-certbot-nginx socat
+    [ "$OS_VER_MAJOR" == "7" ] && yum -y install certbot python-certbot-nginx socat
+    [ "$OS_VER_MAJOR" == "8" ] && dnf -y install certbot python3-certbot-nginx socat
     ;;
   esac
 
