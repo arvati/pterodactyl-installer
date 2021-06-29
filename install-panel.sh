@@ -219,14 +219,6 @@ ask_letsencrypt() {
   read -r CONFIRM_SSL
 
   if [[ "$CONFIRM_SSL" =~ [Yy] ]]; then
-    case "$OS" in
-    ol)
-      print_warning "You need to provide cloudflare Token, Account and Zone ID for acme.sh generate SSL certificate."
-      required_input CF_Token "Cloudflare Token: " "Token cannot be empty"
-      required_input CF_Account_ID "Cloudflare Account ID: " "Account cannot be empty"
-      required_input CF_Zone_ID "Cloudflare Zone ID: " "Zone cannot be empty"
-      ;;
-    esac
     CONFIGURE_LETSENCRYPT=true
     ASSUME_SSL=false
   fi
@@ -794,48 +786,54 @@ firewall_firewalld() {
 
 letsencrypt() {
   FAILED=false
-
   # Install certbot
   case "$OS" in
   debian | ubuntu)
     apt-get -y install certbot python3-certbot-nginx
-    ACMESH=false
     ;;
-  centos)
+  centos | ol)
     [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install certbot python-certbot-nginx
     [ "$OS_VER_MAJOR" == "8" ] && dnf -y -q install certbot python3-certbot-nginx
-    ACMESH=false
-    ;;
-  ol)
-    ACMESH=true
-    curl https://get.acme.sh | sh -s email="$email"
     ;;
   esac
 
   # Obtain certificate
-  if [ $ACMESH == false ]; then
-    certbot --nginx --redirect --no-eff-email --email "$email" -d "$FQDN" || FAILED=true
-  else
-    mkdir -p "/etc/letsencrypt/live/$FQDN/"
-    acme.sh --issue --dns dns_cf -d "$FQDN" \
-          --key-file "/etc/letsencrypt/live/$FQDN/privkey.pem" \
-          --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem" || FAILED=true
-    [ ! -d "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && FAILED=true
-  fi
+  certbot --nginx --redirect --no-eff-email --email "$email" -d "$FQDN" || FAILED=true
 
   # Check if it succeded
   if [ ! -d "/etc/letsencrypt/live/$FQDN/" ] || [ "$FAILED" == true ]; then
     print_warning "The process of obtaining a Let's Encrypt certificate failed!"
-    echo -n "* Still assume SSL? (y/N): "
-    read -r CONFIGURE_SSL
-
-    if [[ "$CONFIGURE_SSL" =~ [Yy] ]]; then
-      ASSUME_SSL=true
-      CONFIGURE_LETSENCRYPT=false
-      configure_nginx
+    print_warning "You need to provide cloudflare Token, Account and Zone ID for acme.sh generate SSL certificate."
+    echo -n "* Try with acme.sh? (y/N): "
+    read -r ACMESH
+    if [[ "$ACMESH" =~ [Yy] ]]; then
+      required_input CF_Token "Cloudflare Token: " "Token cannot be empty"
+      required_input CF_Account_ID "Cloudflare Account ID: " "Account cannot be empty"
+      required_input CF_Zone_ID "Cloudflare Zone ID: " "Zone cannot be empty"
+      curl https://get.acme.sh | sh -s email="$email"
+      mkdir -p "/etc/letsencrypt/live/$FQDN/"
+      FAILED=false
+      acme.sh --issue --dns dns_cf -d "$FQDN" \
+          --key-file "/etc/letsencrypt/live/$FQDN/privkey.pem" \
+          --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem" || FAILED=true
+      [ ! -d "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && FAILED=true
     else
-      ASSUME_SSL=false
-      CONFIGURE_LETSENCRYPT=false
+      FAILED=true
+    fi
+
+    if [ "$FAILED" == true ]; then
+      print_warning "Process of obtaining a SSL certificate not completed!"
+      echo -n "* Still assume SSL? (y/N): "
+      read -r CONFIGURE_SSL
+
+      if [[ "$CONFIGURE_SSL" =~ [Yy] ]]; then
+        ASSUME_SSL=true
+        CONFIGURE_LETSENCRYPT=false
+        configure_nginx
+      else
+        ASSUME_SSL=false
+        CONFIGURE_LETSENCRYPT=false
+      fi
     fi
   fi
 }
