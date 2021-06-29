@@ -820,9 +820,13 @@ letsencrypt() {
       curl https://get.acme.sh | sh -s email="$email"
       FAILED=false
       mkdir -p "/etc/letsencrypt/live/$FQDN/"
-      curl https://get.acme.sh | sh -s email="$EMAIL" --issue --dns dns_cf -d "$FQDN" \
+      curl https://get.acme.sh | sh -s email="$EMAIL" 
+      CF_Token="$CF_Token" CF_Account_ID="$CF_Account_ID" CF_Zone_ID="$CF_Zone_ID" /root/.acme.sh/acme.sh \
+          --issue --dns dns_cf -d "$FQDN" \
           --key-file "/etc/letsencrypt/live/$FQDN/privkey.pem" \
-          --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem" || FAILED=true
+          --cert-file "/etc/letsencrypt/live/$FQDN/cert.pem"  \
+          --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem" \
+          --reloadcmd "systemctl force-reload nginx" || FAILED=true
       [ ! -d "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && FAILED=true
     else
       FAILED=true
