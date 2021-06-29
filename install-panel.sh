@@ -379,7 +379,7 @@ ptdl_dl() {
 create_database() {
   if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
     # secure MariaDB
-    echo "* MariaDB secure installation. The following are safe defaults."
+    echo "* MySql / MariaDB secure installation. The following are safe defaults."
     echo "* Set root password? [Y/n] Y"
     echo "* Remove anonymous users? [Y/n] Y"
     echo "* Disallow root login remotely? [Y/n] Y"
@@ -529,11 +529,15 @@ enable_services_debian_based() {
 }
 
 enable_services_centos_based() {
-  systemctl enable mariadb
+  systemctl enable mariadb ; systemctl start mariadb
   systemctl enable nginx
-  systemctl enable --now redis
-  systemctl start mariadb
-  systemctl start redis
+  systemctl enable --now redis ; systemctl start redis
+}
+
+enable_services_ol_based() {
+  systemctl enable mysqld ; systemctl start mysqld
+  systemctl enable nginx
+  systemctl enable --now redis ; systemctl start redis
 }
 
 selinux_allow() {
@@ -716,13 +720,15 @@ ol8_dep() {
   dnf install -y php php-common php-fpm php-cli php-json php-mysqlnd php-gd php-mbstring php-pdo php-zip php-bcmath php-dom php-opcache
 
   # MariaDB (use from official repo)
-  dnf install -y mariadb mariadb-server
+  #dnf install -y mariadb mariadb-server
+  dnf install -y mysql mysql-server
 
   # Other dependencies
   dnf install -y nginx git redis
 
   # Enable services
-  enable_services_centos_based
+  #enable_services_centos_based
+  enable_services_ol_based
 
   # SELinux (allow nginx and redis)
   selinux_allow
