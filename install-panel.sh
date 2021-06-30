@@ -821,8 +821,9 @@ letsencrypt() {
       FAILED=false
       mkdir -p "/etc/letsencrypt/live/$FQDN/"
       curl https://get.acme.sh | sh -s email="$EMAIL" 
+      /root/.acme.sh/acme.sh --set-default-ca --server letsencrypt
       CF_Token="$CF_Token" CF_Account_ID="$CF_Account_ID" CF_Zone_ID="$CF_Zone_ID" /root/.acme.sh/acme.sh \
-          --issue --dns dns_cf -d "$FQDN" \
+          --issue --dns dns_cf -d "$FQDN" --server letsencrypt \
           --key-file "/etc/letsencrypt/live/$FQDN/privkey.pem" \
           --cert-file "/etc/letsencrypt/live/$FQDN/cert.pem"  \
           --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem" \
