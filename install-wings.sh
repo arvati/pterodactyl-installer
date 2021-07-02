@@ -447,8 +447,9 @@ firewall_firewalld() {
   firewall-cmd --add-port 2022/tcp --permanent -q                                         # Port 2022
   [ "$CONFIGURE_LETSENCRYPT" == true ] && firewall-cmd --add-service=http --permanent -q  # Port 80
   [ "$CONFIGURE_LETSENCRYPT" == true ] && firewall-cmd --add-service=https --permanent -q # Port 443
+  [ "$INSTALL_MARIADB" == true ] && firewall-cmd --add-service=mysql --permanent -q # Port 3306
 
-  firewall-cmd --permanent --zone=trusted --change-interface=pterodactyl0 -q
+  #firewall-cmd --permanent --zone=trusted --change-interface=pterodactyl0 -q
   firewall-cmd --zone=trusted --add-masquerade --permanent
   firewall-cmd --reload -q # Enable firewall
 
