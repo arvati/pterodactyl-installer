@@ -725,7 +725,8 @@ ol8_dep() {
   #dnf install -y mysql mysql-server
 
   # Other dependencies
-  dnf install -y nginx git redis
+  dnf install -y nginx git
+  dnf module install -y redis:6
 
   # Enable services
   #enable_services_centos_based
