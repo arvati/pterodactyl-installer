@@ -55,6 +55,7 @@ fi
 
 # download URLs
 WINGS_DL_URL="https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_amd64"
+GO_DL_URL="https://golang.org/dl/go1.16.6.linux-arm64.tar.gz"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/arvati/pterodactyl-installer/$GITHUB_SOURCE"
 
 COLOR_RED='\033[0;31m'
@@ -266,10 +267,12 @@ enable_docker() {
 install_golang() {
   if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
     if [ "$OS_VER_MAJOR" == "8" ]; then
-      dnf module install -y go-toolset
+      dnf module -y install upx
+      curl -o go.tar.gz $GO_DL_URL
+      rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz
+      echo 'export PATH=$PATH:/usr/local/go/bin' > /etc/profile.d/go.sh
     fi
   fi
-
   echo "* Golang has now been installed."
 }
 
@@ -289,18 +292,26 @@ install_docker() {
 
     enable_docker
   fi
-
   echo "* Docker has now been installed."
 }
 
-ptdl_dl() {
-  echo "* Installing Pterodactyl Wings .. "
-
-  mkdir -p /etc/pterodactyl
-  curl -L -o /usr/local/bin/wings "$WINGS_DL_URL"
-
+wings_compile() {
+  echo "* Compiling Pterodactyl Wings .. "
+  git clone https://github.com/pterodactyl/wings.git
+  cd wings
+  rm -rf build/wings_*
+  /usr/local/go/bin/go mod download
+  GIT_HEAD="$(git rev-parse HEAD | head -c8)"
+  CGO_ENABLED=0 GOOS=linux GOARCH=arm64 /usr/local/go/bin/go build \
+    -ldflags="-s -w -X github.com/pterodactyl/wings/system.Version=$GIT_HEAD" \
+    -v \
+    -trimpath \
+    -o build/wings_linux_arm64 \
+    wings.go
+  upx --brute build/wings_*
+  sudo cp build/wings_linux_arm64 /usr/local/bin/wings
   chmod u+x /usr/local/bin/wings
-
+  mkdir -p /etc/pterodactyl
   echo "* Done."
 }
 
@@ -423,7 +434,8 @@ perform_install() {
   [ "$OS" == "centos" ] || [ "$OS" == "ol" ] && [ "$OS_VER_MAJOR" == "8" ] && dnf_update
   install_docker
   [ "$CONFIGURE_FIREWALL_CMD" == true ] && firewall_firewalld
-  ptdl_dl
+  install_golang
+  wings_compile
   systemd_file
   [ "$INSTALL_MARIADB" == true ] && install_mariadb
   [ "$CONFIGURE_LETSENCRYPT" == true ] && letsencrypt

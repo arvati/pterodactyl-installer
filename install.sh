@@ -62,28 +62,12 @@ done=false
 output "Pterodactyl installation script @ $SCRIPT_VERSION"
 output
 output "Copyright (C) 2018 - 2021, Vilhelm Prytz, <vilhelm@prytznet.se>"
-output "https://github.com/vilhelmprytz/pterodactyl-installer"
+output "https://github.com/arvati/pterodactyl-installer"
 output
 output "Sponsoring/Donations: https://github.com/vilhelmprytz/pterodactyl-installer?sponsor=1"
 output "This script is not associated with the official Pterodactyl Project."
 
 output
-
-panel() {
-  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/$SCRIPT_VERSION/install-panel.sh)
-}
-
-wings() {
-  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/$SCRIPT_VERSION/install-wings.sh)
-}
-
-legacy_panel() {
-  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/$SCRIPT_VERSION/legacy/panel_0.7.sh)
-}
-
-legacy_wings() {
-  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/$SCRIPT_VERSION/legacy/daemon_0.6.sh)
-}
 
 canary_panel() {
   bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/master/install-panel.sh)
@@ -93,17 +77,23 @@ canary_wings() {
   bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/master/install-wings.sh)
 }
 
+compile_wings() {
+  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/master/compile-wings.sh)
+}
+
 while [ "$done" == false ]; do
   options=(
-    "Install panel with canary version of the script (the versions that lives in master, may be broken!)"
-    "Install Wings with canary version of the script (the versions that lives in master, may be broken!)"
+    "Install panel with canary version of the script"
+    "Install Wings with canary version of the script"
     "Install both [0] and [1] on the same machine (wings script runs after panel)"
+    "Install Wings with compiled version from github edge (only for arm64 on oracle 8)"
   )
 
   actions=(
     "canary_panel"
     "canary_wings"
     "canary_panel; canary_wings"
+    "compile_wings"
   )
 
   output "What would you like to do?"
