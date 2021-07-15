@@ -21,10 +21,10 @@ set -e
 #   You should have received a copy of the GNU General Public License       #
 #   along with this program.  If not, see <https://www.gnu.org/licenses/>.  #
 #                                                                           #
-# https://github.com/vilhelmprytz/pterodactyl-installer/blob/master/LICENSE #
+# https://github.com/arvati/pterodactyl-installer/blob/master/LICENSE #
 #                                                                           #
 # This script is not associated with the official Pterodactyl Project.      #
-# https://github.com/vilhelmprytz/pterodactyl-installer                     #
+# https://github.com/arvati/pterodactyl-installer                     #
 #                                                                           #
 #############################################################################
 
@@ -54,8 +54,7 @@ fi
 #################################
 
 # download URLs
-WINGS_AMD64_URL="https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_amd64"
-WINGS_ARM64_URL="https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_arm64"
+WINGS_DL_URL="https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_amd64"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/arvati/pterodactyl-installer/$GITHUB_SOURCE"
 
 COLOR_RED='\033[0;31m'
@@ -183,9 +182,9 @@ check_os_comp() {
   SUPPORTED=false
 
   MACHINE_TYPE=$(uname -m)
-  if [ "${MACHINE_TYPE}" != "x86_64" ]; then # check the architecture
+  if [ "${MACHINE_TYPE}" != "aarch64" ]; then # check the architecture
     print_warning "Detected architecture $MACHINE_TYPE"
-    print_warning "Using any other architecture than 64 bit (x86_64) will cause problems."
+    print_warning "Using any other architecture than 64 bit (ARM) it is better use original bin file."
 
     echo -e -n "* Are you sure you want to proceed? (y/N):"
     read -r choice
@@ -195,25 +194,8 @@ check_os_comp() {
       exit 1
     fi
   fi
-  if [ "${MACHINE_TYPE}" == "aarch64" ]; then
-    WINGS_DL_URL = WINGS_ARM64_URL
-  else
-    WINGS_DL_URL = WINGS_AMD64_URL
-  fi
 
   case "$OS" in
-  ubuntu)
-    [ "$OS_VER_MAJOR" == "18" ] && SUPPORTED=true
-    [ "$OS_VER_MAJOR" == "20" ] && SUPPORTED=true
-    ;;
-  debian)
-    [ "$OS_VER_MAJOR" == "9" ] && SUPPORTED=true
-    [ "$OS_VER_MAJOR" == "10" ] && SUPPORTED=true
-    ;;
-  centos)
-    [ "$OS_VER_MAJOR" == "7" ] && SUPPORTED=true
-    [ "$OS_VER_MAJOR" == "8" ] && SUPPORTED=true
-    ;;
   ol)
     [ "$OS_VER_MAJOR" == "8" ] && SUPPORTED=true
     ;;
@@ -233,23 +215,8 @@ check_os_comp() {
 
   # check virtualization
   echo -e "* Installing virt-what..."
-  if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
-    # silence dpkg output
-    export DEBIAN_FRONTEND=noninteractive
-
-    # install virt-what
-    apt-get -y update -qq
-    apt-get install -y virt-what -qq
-
-    # unsilence
-    unset DEBIAN_FRONTEND
-  elif [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
-    if [ "$OS_VER_MAJOR" == "7" ]; then
-      yum -q -y update
-
-      # install virt-what
-      yum -q -y install virt-what
-    elif [ "$OS_VER_MAJOR" == "8" ]; then
+  if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
+    if [ "$OS_VER_MAJOR" == "8" ]; then
       dnf -y -q update
 
       # install virt-what
@@ -287,14 +254,6 @@ check_os_comp() {
 ## INSTALLATION FUNCTIONS ##
 ############################
 
-apt_update() {
-  apt update -q -y && apt upgrade -y
-}
-
-yum_update() {
-  yum -y update
-}
-
 dnf_update() {
   dnf -y upgrade
 }
@@ -304,48 +263,20 @@ enable_docker() {
   systemctl enable docker
 }
 
+install_golang() {
+  if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
+    if [ "$OS_VER_MAJOR" == "8" ]; then
+      dnf module install -y go-toolset
+    fi
+  fi
+
+  echo "* Golang has now been installed."
+}
+
 install_docker() {
   echo "* Installing docker .."
-  if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
-    # Install dependencies
-    apt-get -y install \
-      apt-transport-https \
-      ca-certificates \
-      gnupg2 \
-      software-properties-common
-
-    # Add docker gpg key
-    curl -fsSL https://download.docker.com/linux/"$OS"/gpg | apt-key add -
-
-    # Show fingerprint to user
-    apt-key fingerprint 0EBFCD88
-
-    # Add docker repo
-    add-apt-repository \
-      "deb [arch=amd64] https://download.docker.com/linux/$OS \
-    $(lsb_release -cs) \
-    stable"
-
-    # Install docker
-    apt_update
-    apt-get -y install docker-ce docker-ce-cli containerd.io
-
-    # Make sure docker is enabled
-    enable_docker
-
-  elif [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
-    if [ "$OS_VER_MAJOR" == "7" ]; then
-      # Install dependencies for Docker
-      yum install -y yum-utils device-mapper-persistent-data lvm2
-
-      # Add repo to yum
-      yum-config-manager \
-        --add-repo \
-        https://download.docker.com/linux/centos/docker-ce.repo
-
-      # Install Docker
-      yum install -y docker-ce docker-ce-cli containerd.io
-    elif [ "$OS_VER_MAJOR" == "8" ]; then
+  if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
+    if [ "$OS_VER_MAJOR" == "8" ]; then
       # Install dependencies for Docker
       dnf install -y dnf-utils device-mapper-persistent-data lvm2
 
@@ -383,13 +314,7 @@ systemd_file() {
 
 install_mariadb() {
   case "$OS" in
-  ubuntu | debian)
-    curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
-    apt update && apt install mariadb-server -y
-    ;;
   centos | ol)
-    [ "$OS_VER_MAJOR" == "7" ] && curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
-    [ "$OS_VER_MAJOR" == "7" ] && yum -y install mariadb-server
     [ "$OS_VER_MAJOR" == "8" ] && dnf install -y mariadb mariadb-server
     #dnf install -y mysql mysql-server
     #systemctl enable mysqld ; systemctl start mysqld
@@ -417,31 +342,11 @@ ask_letsencrypt() {
   fi
 }
 
-firewall_ufw() {
-  apt install ufw -y
-
-  echo -e "\n* Enabling Uncomplicated Firewall (UFW)"
-  echo "* Opening port 22 (SSH), 8080 (Daemon Port), 2022 (Daemon SFTP Port)"
-
-  # pointing to /dev/null silences the command output
-  ufw allow ssh >/dev/null
-  ufw allow 8080 >/dev/null
-  ufw allow 2022 >/dev/null
-
-  [ "$CONFIGURE_LETSENCRYPT" == true ] && ufw allow http >/dev/null
-  [ "$CONFIGURE_LETSENCRYPT" == true ] && ufw allow https >/dev/null
-
-  ufw --force enable
-  ufw --force reload
-  ufw status numbered | sed '/v6/d'
-}
-
 firewall_firewalld() {
   echo -e "\n* Enabling firewall_cmd (firewalld)"
   echo "* Opening port 22 (SSH), 8080 (Daemon Port), 2022 (Daemon SFTP Port)"
 
   # Install
-  [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install firewalld >/dev/null
   [ "$OS_VER_MAJOR" == "8" ] && dnf -y -q install firewalld >/dev/null
 
   # Enable
@@ -467,10 +372,7 @@ letsencrypt() {
   FAILED=false
 
   # Install certbot
-  if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
-    apt-get -y install certbot python3-certbot-nginx socat
-  elif [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
-    [ "$OS_VER_MAJOR" == "7" ] && yum -y install certbot python3-certbot-nginx socat
+  if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
     [ "$OS_VER_MAJOR" == "8" ] && dnf -y install certbot python3-certbot-nginx socat
   else
     # exit
@@ -518,11 +420,8 @@ letsencrypt() {
 
 perform_install() {
   echo "* Installing pterodactyl wings.."
-  [ "$OS" == "ubuntu" ] || [ "$OS" == "debian" ] && apt_update
-  [ "$OS" == "centos" ] && [ "$OS_VER_MAJOR" == "7" ] && yum_update
   [ "$OS" == "centos" ] || [ "$OS" == "ol" ] && [ "$OS_VER_MAJOR" == "8" ] && dnf_update
   install_docker
-  [ "$CONFIGURE_UFW" == true ] && firewall_ufw
   [ "$CONFIGURE_FIREWALL_CMD" == true ] && firewall_firewalld
   ptdl_dl
   systemd_file
@@ -552,7 +451,7 @@ main() {
   echo "* Pterodactyl Wings installation script @ $SCRIPT_RELEASE"
   echo "*"
   echo "* Copyright (C) 2018 - 2021, Vilhelm Prytz, <vilhelm@prytznet.se>"
-  echo "* https://github.com/vilhelmprytz/pterodactyl-installer"
+  echo "* https://github.com/arvati/pterodactyl-installer"
   echo "*"
   echo "* This script is not associated with the official Pterodactyl Project."
   echo "*"
@@ -580,17 +479,6 @@ main() {
   $ASK_MYSQL && echo -n "* Would you like to install MariaDB (MySQL) server on the daemon as well? (y/N): "
   $ASK_MYSQL && read -r CONFIRM_INSTALL_MARIADB
   $ASK_MYSQL && [[ "$CONFIRM_INSTALL_MARIADB" =~ [Yy] ]] && INSTALL_MARIADB=true
-
-  # UFW is available for Ubuntu/Debian
-  if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
-    echo -e -n "* Do you want to automatically configure UFW (firewall)? (y/N): "
-    read -r CONFIRM_UFW
-
-    if [[ "$CONFIRM_UFW" =~ [Yy] ]]; then
-      CONFIGURE_UFW=true
-      CONFIGURE_FIREWALL=true
-    fi
-  fi
 
   # Firewall-cmd is available for CentOS
   if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
