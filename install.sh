@@ -28,8 +28,11 @@ set -e
 #                                                                           #
 #############################################################################
 
-#SCRIPT_VERSION="v0.6.0"
+#SCRIPT_VERSION="v0.11.0"
 SCRIPT_VERSION="master"
+GITHUB_BASE_URL="https://raw.githubusercontent.com/arvati/pterodactyl-installer"
+
+LOG_PATH="/var/log/pterodactyl-installer.log"
 
 # exit with error status code if user is not root
 if [[ $EUID -ne 0 ]]; then
@@ -57,6 +60,13 @@ error() {
   echo ""
 }
 
+execute() {
+  echo -e "\n\n* pterodactyl-installer $(date) \n\n" >>$LOG_PATH
+
+  bash <(curl -s "$1") | tee -a $LOG_PATH
+  [[ -n $2 ]] && execute "$2"
+}
+
 done=false
 
 output "Pterodactyl installation script @ $SCRIPT_VERSION"
@@ -69,17 +79,18 @@ output "This script is not associated with the official Pterodactyl Project."
 
 output
 
-canary_panel() {
-  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/master/install-panel.sh)
-}
+PANEL_LATEST="$GITHUB_BASE_URL/$SCRIPT_VERSION/install-panel.sh"
 
-canary_wings() {
-  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/master/install-wings.sh)
-}
+WINGS_LATEST="$GITHUB_BASE_URL/$SCRIPT_VERSION/install-wings.sh"
 
-compile_wings() {
-  bash <(curl -s https://raw.githubusercontent.com/arvati/pterodactyl-installer/master/compile-wings.sh)
-}
+COMPILE_LATEST="$GITHUB_BASE_URL/$SCRIPT_VERSION/compile-wings.sh"
+
+PANEL_CANARY="$GITHUB_BASE_URL/master/install-panel.sh"
+
+WINGS_CANARY="$GITHUB_BASE_URL/master/install-wings.sh"
+
+COMPILE_CANARY="$GITHUB_BASE_URL/master/compile-wings.sh"
+
 
 while [ "$done" == false ]; do
   options=(
@@ -90,12 +101,11 @@ while [ "$done" == false ]; do
   )
 
   actions=(
-    "canary_panel"
-    "canary_wings"
-    "canary_panel; canary_wings"
-    "compile_wings"
+    "$PANEL_CANARY"
+    "$WINGS_CANARY"
+    "$PANEL_CANARY;$WINGS_CANARY"
+    "$COMPILE_CANARY"
   )
-
   output "What would you like to do?"
 
   for i in "${!options[@]}"; do
@@ -107,7 +117,7 @@ while [ "$done" == false ]; do
 
   [ -z "$action" ] && error "Input is required" && continue
 
-  valid_input=("$(for ((i=0;i<=${#actions[@]}-1;i+=1)); do echo "${i}"; done)")
+  valid_input=("$(for ((i = 0; i <= ${#actions[@]} - 1; i += 1)); do echo "${i}"; done)")
   [[ ! " ${valid_input[*]} " =~ ${action} ]] && error "Invalid option"
-  [[ " ${valid_input[*]} " =~ ${action} ]] && done=true && eval "${actions[$action]}"
+  [[ " ${valid_input[*]} " =~ ${action} ]] && done=true && IFS=";" read -r i1 i2 <<<"${actions[$action]}" && execute "$i1" "$i2"
 done

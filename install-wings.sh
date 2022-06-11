@@ -54,8 +54,7 @@ fi
 #################################
 
 # download URLs
-WINGS_AMD64_URL="https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_amd64"
-WINGS_ARM64_URL="https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_arm64"
+WINGS_DL_BASE_URL="https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/arvati/pterodactyl-installer/$GITHUB_SOURCE"
 
 COLOR_RED='\033[0;31m'
@@ -72,6 +71,14 @@ CONFIGURE_FIREWALL_CMD=false
 CONFIGURE_LETSENCRYPT=false
 FQDN=""
 EMAIL=""
+
+# Database host
+CONFIGURE_DBHOST=false
+CONFIGURE_DBEXTERNAL=false
+CONFIGURE_DBEXTERNAL_HOST="%"
+CONFIGURE_DB_FIREWALL=false
+MYSQL_DBHOST_USER="pterodactyluser"
+MYSQL_DBHOST_PASSWORD="password"
 
 # regex for email input
 regex="^(([A-Za-z0-9]+((\.|\-|\_|\+)?[A-Za-z0-9]?)*[A-Za-z0-9]+)|[A-Za-z0-9]+)@(([A-Za-z0-9]+)+((\.|\-|\_)?([A-Za-z0-9]+)+)*)+\.([A-Za-z]{2,})+$"
@@ -94,6 +101,61 @@ WINGS_VERSION="$(get_latest_release "pterodactyl/wings")"
 valid_email() {
   [[ $1 =~ ${regex} ]]
 }
+
+required_input() {
+  local __resultvar=$1
+  local result=''
+
+  while [ -z "$result" ]; do
+    echo -n "* ${2}"
+    read -r result
+
+    if [ -z "${3}" ]; then
+      [ -z "$result" ] && result="${4}"
+    else
+      [ -z "$result" ] && print_error "${3}"
+    fi
+  done
+
+  eval "$__resultvar="'$result'""
+}
+
+password_input() {
+  local __resultvar=$1
+  local result=''
+  local default="$4"
+
+  while [ -z "$result" ]; do
+    echo -n "* ${2}"
+
+    # modified from https://stackoverflow.com/a/22940001
+    while IFS= read -r -s -n1 char; do
+      [[ -z $char ]] && {
+        printf '\n'
+        break
+      }                               # ENTER pressed; output \n and break.
+      if [[ $char == $'\x7f' ]]; then # backspace was pressed
+        # Only if variable is not empty
+        if [ -n "$result" ]; then
+          # Remove last char from output variable.
+          [[ -n $result ]] && result=${result%?}
+          # Erase '*' to the left.
+          printf '\b \b'
+        fi
+      else
+        # Add typed char to output variable.
+        result+=$char
+        # Print '*' in its stead.
+        printf '*'
+      fi
+    done
+    [ -z "$result" ] && [ -n "$default" ] && result="$default"
+    [ -z "$result" ] && print_error "${3}"
+  done
+
+  eval "$__resultvar="'$result'""
+}
+
 
 #################################
 ####### Visual functions ########
@@ -124,19 +186,6 @@ hyperlink() {
   echo -e "\e]8;;${1}\a${1}\e]8;;\a"
 }
 
-required_input() {
-  local __resultvar=$1
-  local result=''
-
-  while [ -z "$result" ]; do
-    echo -n "* ${2}"
-    read -r result
-
-    [ -z "$result" ] && print_error "${3}"
-  done
-
-  eval "$__resultvar="'$result'""
-}
 
 #################################
 ####### OS check funtions #######
@@ -183,32 +232,41 @@ check_os_comp() {
   SUPPORTED=false
 
   MACHINE_TYPE=$(uname -m)
-  if [ "${MACHINE_TYPE}" != "x86_64" ]; then # check the architecture
-    print_warning "Detected architecture $MACHINE_TYPE"
-    print_warning "Using any other architecture than 64 bit (x86_64) will cause problems."
-
-    echo -e -n "* Are you sure you want to proceed? (y/N):"
+  case "$MACHINE_TYPE" in
+  x86_64)
+    ARCH=amd64
+    ;;
+  arm64) ;&
+    # fallthrough
+  aarch64)
+    print_warning "Detected architecture arm64"
+    print_warning "You will need to use Docker images made specifically for arm64"
+    echo -e -n "* Are you sure you want to proceed? (y/N): "
     read -r choice
 
     if [[ ! "$choice" =~ [Yy] ]]; then
       print_error "Installation aborted!"
       exit 1
     fi
-  fi
-  if [ "${MACHINE_TYPE}" == "aarch64" ]; then
-    WINGS_DL_URL = WINGS_ARM64_URL
-  else
-    WINGS_DL_URL = WINGS_AMD64_URL
-  fi
+    ARCH=arm64
+    ;;
+  *)
+    print_error "Only x86_64 and arm64 are supported for Wings"
+    exit 1
+    ;;
+  esac
+
 
   case "$OS" in
   ubuntu)
     [ "$OS_VER_MAJOR" == "18" ] && SUPPORTED=true
     [ "$OS_VER_MAJOR" == "20" ] && SUPPORTED=true
+    [ "$OS_VER_MAJOR" == "22" ] && SUPPORTED=true
     ;;
   debian)
     [ "$OS_VER_MAJOR" == "9" ] && SUPPORTED=true
     [ "$OS_VER_MAJOR" == "10" ] && SUPPORTED=true
+    [ "$OS_VER_MAJOR" == "11" ] && SUPPORTED=true
     ;;
   centos)
     [ "$OS_VER_MAJOR" == "7" ] && SUPPORTED=true
@@ -259,6 +317,8 @@ check_os_comp() {
     print_error "Invalid OS."
     exit 1
   fi
+
+  export PATH="$PATH:/sbin:/usr/sbin"
 
   virt_serv=$(virt-what)
 
@@ -366,7 +426,7 @@ ptdl_dl() {
   echo "* Installing Pterodactyl Wings .. "
 
   mkdir -p /etc/pterodactyl
-  curl -L -o /usr/local/bin/wings "$WINGS_DL_URL"
+  curl -L -o /usr/local/bin/wings "$WINGS_DL_BASE_URL$ARCH"
 
   chmod u+x /usr/local/bin/wings
 
@@ -382,13 +442,23 @@ systemd_file() {
 }
 
 install_mariadb() {
+  MARIADB_URL="https://downloads.mariadb.com/MariaDB/mariadb_repo_setup"
+
   case "$OS" in
-  ubuntu | debian)
-    curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
-    apt update && apt install mariadb-server -y
+  debian)
+    if [ "$ARCH" == "aarch64" ]; then
+      print_warning "MariaDB doesn't support Debian on arm64"
+      return
+    fi
+    [ "$OS_VER_MAJOR" == "9" ] && curl -sS $MARIADB_URL | sudo bash
+    apt install -y mariadb-server
+    ;;
+  ubuntu)
+    [ "$OS_VER_MAJOR" == "18" ] && curl -sS $MARIADB_URL | sudo bash
+    apt install -y mariadb-server
     ;;
   centos | ol)
-    [ "$OS_VER_MAJOR" == "7" ] && curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
+    [ "$OS_VER_MAJOR" == "7" ] && curl -sS $MARIADB_URL | bash
     [ "$OS_VER_MAJOR" == "7" ] && yum -y install mariadb-server
     [ "$OS_VER_MAJOR" == "8" ] && dnf install -y mariadb mariadb-server
     #dnf install -y mysql mysql-server
@@ -396,6 +466,78 @@ install_mariadb() {
     ;;
   esac
   systemctl enable mariadb ; systemctl start mariadb
+}
+
+ask_database_user() {
+  echo -n "* Do you want to automatically configure a user for database hosts? (y/N): "
+  read -r CONFIRM_DBHOST
+
+  if [[ "$CONFIRM_DBHOST" =~ [Yy] ]]; then
+    ask_database_external
+    CONFIGURE_DBHOST=true
+  fi
+}
+
+ask_database_external() {
+  echo -n "* Do you want to configure MySQL to be accessed externally? (y/N): "
+  read -r CONFIRM_DBEXTERNAL
+
+  if [[ "$CONFIRM_DBEXTERNAL" =~ [Yy] ]]; then
+    echo -n "* Enter the panel address (blank for any address): "
+    read -r CONFIRM_DBEXTERNAL_HOST
+    if [ "$CONFIRM_DBEXTERNAL_HOST" != "" ]; then
+      CONFIGURE_DBEXTERNAL_HOST="$CONFIRM_DBEXTERNAL_HOST"
+    fi
+    [ "$CONFIGURE_FIREWALL" == true ] && ask_database_firewall
+    CONFIGURE_DBEXTERNAL=true
+  fi
+}
+
+ask_database_firewall() {
+  print_warning "Allow incoming traffic to port 3306 (MySQL) can potentially be a security risk, unless you know what you are doing!"
+  echo -n "* Would you like to allow incoming traffic to port 3306? (y/N): "
+  read -r CONFIRM_DB_FIREWALL
+  if [[ "$CONFIRM_DB_FIREWALL" =~ [Yy] ]]; then
+    CONFIGURE_DB_FIREWALL=true
+  fi
+}
+
+configure_mysql() {
+  echo "* Performing MySQL queries.."
+
+  if [ "$CONFIGURE_DBEXTERNAL" == true ]; then
+    echo "* Creating MySQL user..."
+    mysql -u root -e "CREATE USER '${MYSQL_DBHOST_USER}'@'${CONFIGURE_DBEXTERNAL_HOST}' IDENTIFIED BY '${MYSQL_DBHOST_PASSWORD}';"
+
+    echo "* Granting privileges.."
+    mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_DBHOST_USER}'@'${CONFIGURE_DBEXTERNAL_HOST}' WITH GRANT OPTION;"
+  else
+    echo "* Creating MySQL user..."
+    mysql -u root -e "CREATE USER '${MYSQL_DBHOST_USER}'@'127.0.0.1' IDENTIFIED BY '${MYSQL_DBHOST_PASSWORD}';"
+
+    echo "* Granting privileges.."
+    mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_DBHOST_USER}'@'127.0.0.1' WITH GRANT OPTION;"
+  fi
+
+  echo "* Flushing privileges.."
+  mysql -u root -e "FLUSH PRIVILEGES;"
+
+  echo "* Changing MySQL bind address.."
+
+  if [ "$CONFIGURE_DBEXTERNAL" == true ]; then
+    case "$OS" in
+    debian | ubuntu)
+      sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/mariadb.conf.d/50-server.cnf
+      ;;
+    centos | ol)
+      sed -ne 's/^#bind-address=0.0.0.0$/bind-address=0.0.0.0/' /etc/my.cnf.d/mariadb-server.cnf
+      ;;
+    esac
+
+    systemctl restart mysqld
+  fi
+
+  echo "* MySQL configured!"
 }
 
 #################################
@@ -430,6 +572,7 @@ firewall_ufw() {
 
   [ "$CONFIGURE_LETSENCRYPT" == true ] && ufw allow http >/dev/null
   [ "$CONFIGURE_LETSENCRYPT" == true ] && ufw allow https >/dev/null
+  [ "$CONFIGURE_DB_FIREWALL" == true ] && ufw allow 3306 >/dev/null
 
   ufw --force enable
   ufw --force reload
@@ -453,9 +596,9 @@ firewall_firewalld() {
   firewall-cmd --add-port 2022/tcp --permanent -q                                         # Port 2022
   [ "$CONFIGURE_LETSENCRYPT" == true ] && firewall-cmd --add-service=http --permanent -q  # Port 80
   [ "$CONFIGURE_LETSENCRYPT" == true ] && firewall-cmd --add-service=https --permanent -q # Port 443
-  [ "$INSTALL_MARIADB" == true ] && firewall-cmd --add-service=mysql --permanent -q # Port 3306
+  [ "$CONFIGURE_DB_FIREWALL" == true ] && firewall-cmd --add-service=mysql --permanent -q # Port 3306
 
-  #firewall-cmd --permanent --zone=trusted --change-interface=pterodactyl0 -q
+  firewall-cmd --permanent --zone=trusted --change-interface=pterodactyl0 -q
   firewall-cmd --zone=trusted --add-masquerade --permanent
   firewall-cmd --reload -q # Enable firewall
 
@@ -470,8 +613,12 @@ letsencrypt() {
   if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
     apt-get -y install certbot python3-certbot-nginx socat
   elif [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
+    [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install epel-release
     [ "$OS_VER_MAJOR" == "7" ] && yum -y install certbot python3-certbot-nginx socat
-    [ "$OS_VER_MAJOR" == "8" ] && dnf -y install certbot python3-certbot-nginx socat
+
+    [ "$OS_VER_MAJOR" == "8" ] && dnf -q install -y oracle-epel-release-el8 https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+    [ "$OS_VER_MAJOR" == "8" ] && dnf -y -q install certbot python3-certbot-nginx socat
+
   else
     # exit
     print_error "OS not supported."
@@ -521,12 +668,14 @@ perform_install() {
   [ "$OS" == "ubuntu" ] || [ "$OS" == "debian" ] && apt_update
   [ "$OS" == "centos" ] && [ "$OS_VER_MAJOR" == "7" ] && yum_update
   [ "$OS" == "centos" ] || [ "$OS" == "ol" ] && [ "$OS_VER_MAJOR" == "8" ] && dnf_update
-  install_docker
+
   [ "$CONFIGURE_UFW" == true ] && firewall_ufw
   [ "$CONFIGURE_FIREWALL_CMD" == true ] && firewall_firewalld
+  install_docker
   ptdl_dl
   systemd_file
   [ "$INSTALL_MARIADB" == true ] && install_mariadb
+  [ "$CONFIGURE_DBHOST" == true ] && configure_mysql
   [ "$CONFIGURE_LETSENCRYPT" == true ] && letsencrypt
 
   # return true if script has made it this far
@@ -574,13 +723,6 @@ main() {
   echo -e "* ${COLOR_RED}Note${COLOR_NC}: this script will not enable swap (for docker)."
   print_brake 42
 
-  # Only ask if MySQL is not detected
-  type mysql >/dev/null 2>&1 && ASK_MYSQL=false || ASK_MYSQL=true
-
-  $ASK_MYSQL && echo -n "* Would you like to install MariaDB (MySQL) server on the daemon as well? (y/N): "
-  $ASK_MYSQL && read -r CONFIRM_INSTALL_MARIADB
-  $ASK_MYSQL && [[ "$CONFIRM_INSTALL_MARIADB" =~ [Yy] ]] && INSTALL_MARIADB=true
-
   # UFW is available for Ubuntu/Debian
   if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
     echo -e -n "* Do you want to automatically configure UFW (firewall)? (y/N): "
@@ -601,6 +743,24 @@ main() {
       CONFIGURE_FIREWALL_CMD=true
       CONFIGURE_FIREWALL=true
     fi
+  fi
+
+  ask_database_user
+
+  if [ "$CONFIGURE_DBHOST" == true ]; then
+    type mysql >/dev/null 2>&1 && HAS_MYSQL=true || HAS_MYSQL=false
+
+    if [ "$HAS_MYSQL" == false ]; then
+      INSTALL_MARIADB=true
+    fi
+
+    MYSQL_DBHOST_USER="-"
+    while [[ "$MYSQL_DBHOST_USER" == *"-"* ]]; do
+      required_input MYSQL_DBHOST_USER "Database host username (pterodactyluser): " "" "pterodactyluser"
+      [[ "$MYSQL_DBHOST_USER" == *"-"* ]] && print_error "Database user cannot contain hyphens"
+    done
+
+    password_input MYSQL_DBHOST_PASSWORD "Database host password: " "Password cannot be empty"
   fi
 
   ask_letsencrypt

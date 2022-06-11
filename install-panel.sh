@@ -112,6 +112,11 @@ valid_email() {
   [[ $1 =~ ${regex} ]]
 }
 
+invalid_ip() {
+  ip route get "$1" >/dev/null 2>&1
+  echo $?
+}
+
 ####### Visual functions ########
 
 print_error() {
@@ -152,7 +157,11 @@ required_input() {
     echo -n "* ${2}"
     read -r result
 
-    [ -z "$result" ] && print_error "${3}"
+    if [ -z "${3}" ]; then
+      [ -z "$result" ] && result="${4}"
+    else
+      [ -z "$result" ] && print_error "${3}"
+    fi
   done
 
   eval "$__resultvar="'$result'""
@@ -233,6 +242,15 @@ ask_assume_ssl() {
 
   [[ "$ASSUME_SSL_INPUT" =~ [Yy] ]] && ASSUME_SSL=true
   true
+}
+
+check_FQDN_SSL() {
+  if [[ $(invalid_ip "$FQDN") == 1 && $FQDN != 'localhost' ]]; then
+    SSL_AVAILABLE=true
+  else
+    print_warning "* Let's Encrypt will not be available for IP addresses."
+    echo "* To use Let's Encrypt, you must use a valid domain name."
+  fi
 }
 
 ask_firewall() {
@@ -387,7 +405,8 @@ create_database() {
     echo "* Reload privilege tables now? [Y/n] Y"
     echo "*"
 
-    mysql_secure_installation
+    [ "$OS_VER_MAJOR" == "7" ] && mariadb-secure-installation
+    [ "$OS_VER_MAJOR" == "8" ] && mysql_secure_installation
 
     echo "* The script should have asked you to set the MySQL root password earlier (not to be confused with the pterodactyl database user password)"
     echo "* MySQL will now ask you to enter the password before each command."
@@ -547,6 +566,30 @@ selinux_allow() {
   setsebool -P httpd_unified 1 || true
 }
 
+ubuntu22_dep() {
+  echo "* Installing dependencies for Ubuntu 22.."
+
+  # Add "add-apt-repository" command
+  apt -y install software-properties-common curl apt-transport-https ca-certificates gnupg
+
+  # Ubuntu universe repo
+  add-apt-repository universe
+
+  # Add PPA for PHP (we need 8.0 and focal only has 7.4)
+  LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
+
+  # Update repositories list
+  apt_update
+
+  # Install Dependencies
+  apt -y install php8.0 php8.0-{cli,gd,mysql,pdo,mbstring,tokenizer,bcmath,xml,fpm,curl,zip} mariadb-server nginx tar unzip git redis-server redis cron
+
+  # Enable services
+  enable_services_debian_based
+
+  echo "* Dependencies for Ubuntu installed!"
+}
+
 ubuntu20_dep() {
   echo "* Installing dependencies for Ubuntu 20.."
 
@@ -624,7 +667,7 @@ debian_stretch_dep() {
   echo "* Dependencies for Debian 8/9 installed!"
 }
 
-debian_dep() {
+debian_buster_dep() {
   echo "* Installing dependencies for Debian 10.."
 
   # MariaDB need dirmngr
@@ -646,6 +689,30 @@ debian_dep() {
   enable_services_debian_based
 
   echo "* Dependencies for Debian 10 installed!"
+}
+
+debian_dep() {
+  echo "* Installing dependencies for Debian 11.."
+
+  # MariaDB need dirmngr
+  apt -y install dirmngr
+
+  # install PHP 8.0 using sury's repo instead of default 7.2 package (in buster repo)
+  # this guide shows how: https://vilhelmprytz.se/2018/08/22/install-php72-on-Debian-8-and-9.html
+  apt install ca-certificates apt-transport-https lsb-release -y
+  wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+  echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/php.list
+
+  # Update repositories list
+  apt_update
+
+  # install dependencies
+  apt -y install php8.0 php8.0-{cli,gd,mysql,pdo,mbstring,tokenizer,bcmath,xml,fpm,curl,zip} mariadb-server nginx curl tar unzip git redis-server cron
+
+  # Enable services
+  enable_services_debian_based
+
+  echo "* Dependencies for Debian 11 installed!"
 }
 
 centos7_dep() {
@@ -708,7 +775,8 @@ ol8_dep() {
   echo "* Installing dependencies for Oracle Linux 8.."
 
   # SELinux tools
-  dnf install -y setroubleshoot-server setools mcstrans
+  # dnf install -y setroubleshoot-server setools mcstrans
+  dnf install -y policycoreutils selinux-policy selinux-policy-targeted setroubleshoot-server setools setools-console mcstrans
 
   # add remi repo (php8.0)
   dnf install -y oracle-epel-release-el8 https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -725,7 +793,7 @@ ol8_dep() {
   #dnf install -y mysql mysql-server
 
   # Other dependencies
-  dnf install -y nginx git
+  dnf install -y nginx curl tar zip unzip git
   dnf module install -y redis:6
 
   # Enable services
@@ -735,7 +803,7 @@ ol8_dep() {
   # SELinux (allow nginx and redis)
   selinux_allow
 
-  echo "* Dependencies for CentOS installed!"
+  echo "* Dependencies for Oracle Linux 8 installed!"
 }
 
 ##### OTHER OS SPECIFIC FUNCTIONS #####
@@ -794,6 +862,7 @@ firewall_firewalld() {
 
 letsencrypt() {
   FAILED=false
+
   # Install certbot
   case "$OS" in
   debian | ubuntu)
@@ -913,11 +982,13 @@ perform_install() {
     [ "$CONFIGURE_UFW" == true ] && firewall_ufw
 
     if [ "$OS" == "ubuntu" ]; then
+      [ "$OS_VER_MAJOR" == "22" ] && ubuntu22_dep
       [ "$OS_VER_MAJOR" == "20" ] && ubuntu20_dep
       [ "$OS_VER_MAJOR" == "18" ] && ubuntu18_dep
     elif [ "$OS" == "debian" ]; then
       [ "$OS_VER_MAJOR" == "9" ] && debian_stretch_dep
-      [ "$OS_VER_MAJOR" == "10" ] && debian_dep
+      [ "$OS_VER_MAJOR" == "10" ] && debian_buster_dep
+      [ "$OS_VER_MAJOR" == "11" ] && debian_dep
     fi
     ;;
 
@@ -1040,14 +1111,19 @@ main() {
     [ -z "$FQDN" ] && print_error "FQDN cannot be empty"
   done
 
+  # Check if SSL is available
+  check_FQDN_SSL
+
   # Ask if firewall is needed
   ask_firewall
 
-  # Ask if letsencrypt is needed
-  ask_letsencrypt
-
-  # If it's already true, this should be a no-brainer
-  [ "$CONFIGURE_LETSENCRYPT" == false ] && ask_assume_ssl
+  # Only ask about SSL if it is available
+  if [ "$SSL_AVAILABLE" == true ]; then
+    # Ask if letsencrypt is needed
+    ask_letsencrypt
+    # If it's already true, this should be a no-brainer
+    [ "$CONFIGURE_LETSENCRYPT" == false ] && ask_assume_ssl
+  fi
 
   # verify FQDN if user has selected to assume SSL or configure Let's Encrypt
   [ "$CONFIGURE_LETSENCRYPT" == true ] || [ "$ASSUME_SSL" == true ] && bash <(curl -s $GITHUB_BASE_URL/lib/verify-fqdn.sh) "$FQDN" "$OS"
