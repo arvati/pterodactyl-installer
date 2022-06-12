@@ -70,6 +70,7 @@ fail() {
 
 dep_install() {
   [ "$os" == "centos" ] && yum install -q -y bind-utils
+  [ "$os" == "ol" ] && yum install -q -y bind-utils
   [ "$os" == "debian" ] && apt-get install -y dnsutils -qq
   [ "$os" == "ubuntu" ] && apt-get install -y dnsutils -qq
   return 0
