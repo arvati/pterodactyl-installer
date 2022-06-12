@@ -54,13 +54,19 @@ fi
 #################################
 
 # download URLs
-WINGS_DL_BASE_URL="https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_"
+WINGS_GITHUB_BASE="github.com/pterodactyl/wings"
+WINGS_DL_BASE_URL="https://$WINGS_GITHUB_BASE/releases/latest/download/wings_linux_"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/arvati/pterodactyl-installer/$GITHUB_SOURCE"
+GO_DL_URL="https://go.dev/dl/go1.18.3.linux-arm64.tar.gz"
+
 
 COLOR_RED='\033[0;31m'
 COLOR_NC='\033[0m'
 
 INSTALL_MARIADB=false
+
+# compile from source
+COMPILE_WINGS=false
 
 # firewall
 CONFIGURE_FIREWALL=false
@@ -364,6 +370,18 @@ enable_docker() {
   systemctl enable docker
 }
 
+install_golang() {
+  if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
+    if [ "$OS_VER_MAJOR" == "8" ]; then
+      dnf module -y install upx
+      curl -o go.tar.gz $GO_DL_URL
+      rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz
+      echo 'export PATH=$PATH:/usr/local/go/bin' > /etc/profile.d/go.sh
+    fi
+  fi
+  echo "* Golang has now been installed."
+}
+
 install_docker() {
   echo "* Installing docker .."
   if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
@@ -430,6 +448,26 @@ ptdl_dl() {
 
   chmod u+x /usr/local/bin/wings
 
+  echo "* Done."
+}
+
+wings_compile() {
+  echo "* Compiling Pterodactyl Wings .. "
+  git clone "https://$WINGS_GITHUB_BASE.git"
+  cd wings
+  rm -rf build/wings_*
+  /usr/local/go/bin/go mod download
+  GIT_HEAD="$(git rev-parse HEAD | head -c8)"
+  CGO_ENABLED=0 GOOS=linux GOARCH=arm64 /usr/local/go/bin/go build \
+    -ldflags="-s -w -X $WINGS_GITHUB_BASE/system.Version=$GIT_HEAD" \
+    -v \
+    -trimpath \
+    -o build/wings_linux_arm64 \
+    wings.go
+  upx --brute build/wings_*
+  sudo cp build/wings_linux_arm64 /usr/local/bin/wings
+  chmod u+x /usr/local/bin/wings
+  mkdir -p /etc/pterodactyl
   echo "* Done."
 }
 
@@ -671,8 +709,16 @@ perform_install() {
 
   [ "$CONFIGURE_UFW" == true ] && firewall_ufw
   [ "$CONFIGURE_FIREWALL_CMD" == true ] && firewall_firewalld
+  
   install_docker
-  ptdl_dl
+
+  if [ "$COMPILE_WINGS" == true ]; then
+    install_golang
+    wings_compile
+  else
+    ptdl_dl
+  fi
+
   systemd_file
   [ "$INSTALL_MARIADB" == true ] && install_mariadb
   [ "$CONFIGURE_DBHOST" == true ] && configure_mysql
@@ -742,6 +788,16 @@ main() {
     if [[ "$CONFIRM_FIREWALL_CMD" =~ [Yy] ]]; then
       CONFIGURE_FIREWALL_CMD=true
       CONFIGURE_FIREWALL=true
+    fi
+  fi
+
+  # Compile from source is available for Oracle Linux 8 on Ampere arm64 machines
+  if [ "$OS" == "ol" ] && [ "$OS_VER_MAJOR" == "8" ] && [ "$ARCH" == "arm64" ]; then
+    echo -e -n "* Do you want to compile wings from source unstable ? (y/N): "
+    read -r CONFIRM_COMPILE_WINGS
+
+    if [[ "$CONFIRM_COMPILE_WINGS" =~ [Yy] ]]; then
+      COMPILE_WINGS=true
     fi
   fi
 

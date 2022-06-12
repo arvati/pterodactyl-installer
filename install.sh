@@ -83,13 +83,9 @@ PANEL_LATEST="$GITHUB_BASE_URL/$SCRIPT_VERSION/install-panel.sh"
 
 WINGS_LATEST="$GITHUB_BASE_URL/$SCRIPT_VERSION/install-wings.sh"
 
-COMPILE_LATEST="$GITHUB_BASE_URL/$SCRIPT_VERSION/compile-wings.sh"
-
 PANEL_CANARY="$GITHUB_BASE_URL/master/install-panel.sh"
 
 WINGS_CANARY="$GITHUB_BASE_URL/master/install-wings.sh"
-
-COMPILE_CANARY="$GITHUB_BASE_URL/master/compile-wings.sh"
 
 
 while [ "$done" == false ]; do
@@ -97,15 +93,14 @@ while [ "$done" == false ]; do
     "Install panel with canary version of the script"
     "Install Wings with canary version of the script"
     "Install both [0] and [1] on the same machine (wings script runs after panel)"
-    "Install Wings with compiled version from github edge (only for arm64 on oracle 8)"
   )
 
   actions=(
     "$PANEL_CANARY"
     "$WINGS_CANARY"
     "$PANEL_CANARY;$WINGS_CANARY"
-    "$COMPILE_CANARY"
   )
+  
   output "What would you like to do?"
 
   for i in "${!options[@]}"; do
