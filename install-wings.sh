@@ -329,7 +329,7 @@ check_os_comp() {
   virt_serv=$(virt-what)
 
   case "$virt_serv" in
-  openvz | lxc)
+  *openvz* | *lxc*)
     print_warning "Unsupported type of virtualization detected. Please consult with your hosting provider whether your server can run Docker or not. Proceed at your own risk."
     echo -e -n "* Are you sure you want to proceed? (y/N): "
     read -r CONFIRM_PROCEED
@@ -597,7 +597,7 @@ firewall_ufw() {
   apt install ufw -y
 
   echo -e "\n* Enabling Uncomplicated Firewall (UFW)"
-  echo "* Opening port 22 (SSH), 8080 (Daemon Port), 2022 (Daemon SFTP Port)"
+  echo "* Opening port 22 (SSH), 8080 (Wings Port), 2022 (Wings SFTP Port)"
 
   # pointing to /dev/null silences the command output
   ufw allow ssh >/dev/null
@@ -615,7 +615,7 @@ firewall_ufw() {
 
 firewall_firewalld() {
   echo -e "\n* Enabling firewall_cmd (firewalld)"
-  echo "* Opening port 22 (SSH), 8080 (Daemon Port), 2022 (Daemon SFTP Port)"
+  echo "* Opening port 22 (SSH), 8080 (Wings Port), 2022 (Wings SFTP Port)"
 
   # Install
   [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install firewalld >/dev/null

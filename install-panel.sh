@@ -340,6 +340,7 @@ check_os_comp() {
     PHP_SOCKET="/run/php/php8.0-fpm.sock"
     [ "$OS_VER_MAJOR" == "9" ] && SUPPORTED=true
     [ "$OS_VER_MAJOR" == "10" ] && SUPPORTED=true
+    [ "$OS_VER_MAJOR" == "11" ] && SUPPORTED=true
     ;;
   centos)
     PHP_SOCKET="/var/run/php-fpm/pterodactyl.sock"
@@ -1065,15 +1066,17 @@ main() {
   echo "* before running this script, the script will do that for you."
   echo ""
 
-  echo -n "* Database name (panel): "
-  read -r MYSQL_DB_INPUT
+  MYSQL_DB="-"
+  while [[ "$MYSQL_DB" == *"-"* ]]; do
+    required_input MYSQL_DB "Database name (panel): " "" "panel"
+    [[ "$MYSQL_DB" == *"-"* ]] && print_error "Database name cannot contain hyphens"
+  done
 
-  [ -z "$MYSQL_DB_INPUT" ] && MYSQL_DB="panel" || MYSQL_DB=$MYSQL_DB_INPUT
-
-  echo -n "* Username (pterodactyl): "
-  read -r MYSQL_USER_INPUT
-
-  [ -z "$MYSQL_USER_INPUT" ] && MYSQL_USER="pterodactyl" || MYSQL_USER=$MYSQL_USER_INPUT
+  MYSQL_USER="-"
+  while [[ "$MYSQL_USER" == *"-"* ]]; do
+    required_input MYSQL_USER "Database username (pterodactyl): " "" "pterodactyl"
+    [[ "$MYSQL_USER" == *"-"* ]] && print_error "Database user cannot contain hyphens"
+  done
 
   # MySQL password input
   rand_pw=$(
