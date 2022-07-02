@@ -67,6 +67,7 @@ user_lastname=""
 user_password=""
 
 # Assume SSL, will fetch different config if true
+SSL_AVAILABLE=false
 ASSUME_SSL=false
 CONFIGURE_LETSENCRYPT=false
 
@@ -83,8 +84,8 @@ CONFIGURE_FIREWALL_CMD=false
 # firewall status
 CONFIGURE_FIREWALL=false
 
-# regex for email input
-regex="^(([A-Za-z0-9]+((\.|\-|\_|\+)?[A-Za-z0-9]?)*[A-Za-z0-9]+)|[A-Za-z0-9]+)@(([A-Za-z0-9]+)+((\.|\-|\_)?([A-Za-z0-9]+)+)*)+\.([A-Za-z]{2,})+$"
+# input validation regex's
+email_regex="^(([A-Za-z0-9]+((\.|\-|\_|\+)?[A-Za-z0-9]?)*[A-Za-z0-9]+)|[A-Za-z0-9]+)@(([A-Za-z0-9]+)+((\.|\-|\_)?([A-Za-z0-9]+)+)*)+\.([A-Za-z]{2,})+$"
 
 ####### Version checking ########
 
@@ -109,7 +110,7 @@ array_contains_element() {
 }
 
 valid_email() {
-  [[ $1 =~ ${regex} ]]
+  [[ $1 =~ ${email_regex} ]]
 }
 
 invalid_ip() {
@@ -222,8 +223,6 @@ ask_letsencrypt() {
     print_warning "Let's Encrypt requires port 80/443 to be opened! You have opted out of the automatic firewall configuration; use this at your own risk (if port 80/443 is closed, the script will fail)!"
   fi
 
-  print_warning "You cannot use Let's Encrypt with your hostname as an IP address! It must be a FQDN (e.g. panel.example.org)."
-
   echo -e -n "* Do you want to automatically configure HTTPS using Let's Encrypt? (y/N): "
   read -r CONFIRM_SSL
 
@@ -321,7 +320,7 @@ check_os_comp() {
     print_warning "Detected CPU architecture $CPU_ARCHITECTURE"
     print_warning "Using any other architecture than 64 bit (x86_64) will cause problems."
 
-    echo -e -n "* Are you sure you want to proceed? (y/N):"
+    echo -e -n "* Are you sure you want to proceed? (y/N): "
     read -r choice
 
     if [[ ! "$choice" =~ [Yy] ]]; then
@@ -335,6 +334,7 @@ check_os_comp() {
     PHP_SOCKET="/run/php/php8.0-fpm.sock"
     [ "$OS_VER_MAJOR" == "18" ] && SUPPORTED=true
     [ "$OS_VER_MAJOR" == "20" ] && SUPPORTED=true
+    [ "$OS_VER_MAJOR" == "22" ] && SUPPORTED=true
     ;;
   debian)
     PHP_SOCKET="/run/php/php8.0-fpm.sock"
@@ -649,7 +649,7 @@ debian_stretch_dep() {
 
   # install PHP 8.0 using sury's repo instead of PPA
   apt install ca-certificates apt-transport-https lsb-release -y
-  wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+  curl -o /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
   echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/php.list
 
   # Add the MariaDB repo (oldstable has mariadb version 10.1 and we need newer than that)
@@ -676,7 +676,7 @@ debian_buster_dep() {
   # install PHP 8.0 using sury's repo instead of default 7.2 package (in buster repo)
   # this guide shows how: https://vilhelmprytz.se/2018/08/22/install-php72-on-Debian-8-and-9.html
   apt install ca-certificates apt-transport-https lsb-release -y
-  wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+  curl -o /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
   echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/php.list
 
   # Update repositories list
@@ -700,7 +700,7 @@ debian_dep() {
   # install PHP 8.0 using sury's repo instead of default 7.2 package (in buster repo)
   # this guide shows how: https://vilhelmprytz.se/2018/08/22/install-php72-on-Debian-8-and-9.html
   apt install ca-certificates apt-transport-https lsb-release -y
-  wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+  curl -o /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
   echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/php.list
 
   # Update repositories list
