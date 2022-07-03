@@ -891,7 +891,7 @@ letsencrypt() {
       curl https://get.acme.sh | sh -s email="$email"
       FAILED=false
       mkdir -p "/etc/letsencrypt/live/$FQDN/"
-      curl https://get.acme.sh | sh -s email="$EMAIL" 
+      curl https://get.acme.sh | sh -s email="$email" 
       /root/.acme.sh/acme.sh --set-default-ca --server letsencrypt
       CF_Token="$CF_Token" CF_Account_ID="$CF_Account_ID" CF_Zone_ID="$CF_Zone_ID" /root/.acme.sh/acme.sh \
           --issue --dns dns_cf -d "$FQDN" --server letsencrypt \
@@ -1068,7 +1068,7 @@ main() {
 
   MYSQL_DB="-"
   while [[ "$MYSQL_DB" == *"-"* ]]; do
-    required_input MYSQL_DB "Database name (panel): " "" "panel"
+    required_input MYSQL_DB "Database name (panel): " "" "pterodactyl"
     [[ "$MYSQL_DB" == *"-"* ]] && print_error "Database name cannot contain hyphens"
   done
 

@@ -10,7 +10,7 @@ Read more about [Pterodactyl](https://pterodactyl.io/) here. This script is not 
 - Automatic installation of the Pterodactyl Panel (dependencies, database, cronjob, nginx).
 - Automatic installation of the Pterodactyl Wings (Docker, systemd).
 - Panel: (optional) automatic configuration of Let's Encrypt.
-- Panel: (optional) automatic configuration of UFW (firewall for Ubuntu/Debian).
+- Wings: (optional) compile latest version from source
 
 ## Help and support
 
@@ -23,17 +23,7 @@ List of supported installation setups for panel and Wings (installations support
 ### Supported panel operating systems and webservers
 
 | Operating System | Version | nginx support      | PHP Version |
-| ---------------- | ------- | ------------------ | ----------- |
-| Ubuntu           | 14.04   | :red_circle:       |             |
-|                  | 16.04   | :red_circle: \*    |             |
-|                  | 18.04   | :white_check_mark: | 8.0         |
-|                  | 20.04   | :white_check_mark: | 8.0         |
-| Debian           | 8       | :red_circle: \*    |             |
-|                  | 9       | :white_check_mark: | 8.0         |
-|                  | 10      | :white_check_mark: | 8.0         |
-| CentOS           | 6       | :red_circle:       |             |
-|                  | 7       | :white_check_mark: | 8.0         |
-|                  | 8       | :white_check_mark: | 8.0         |
+| ---------------- | ------- | ------------------ | ----------- |        |
 | Oracle Linux     | 7       | :red_circle:       |             |
 |                  | 8       | :white_check_mark: | 8.0         |
 
@@ -41,20 +31,9 @@ List of supported installation setups for panel and Wings (installations support
 
 | Operating System | Version | Supported          |
 | ---------------- | ------- | ------------------ |
-| Ubuntu           | 14.04   | :red_circle:       |
-|                  | 16.04   | :red_circle: \*    |
-|                  | 18.04   | :white_check_mark: |
-|                  | 20.04   | :white_check_mark: |
-| Debian           | 8       | :red_circle:       |
-|                  | 9       | :white_check_mark: |
-|                  | 10      | :white_check_mark: |
-| CentOS           | 6       | :red_circle:       |
-|                  | 7       | :white_check_mark: |
-|                  | 8       | :white_check_mark: |
 | Oracle Linux     | 7       | :red_circle:       |
 |                  | 8       | :white_check_mark: |
 
-_\* Ubuntu 16 and Debian 8 no longer supported since Pterodactyl does not actively support it._
 
 ## Using the installation scripts
 
@@ -68,9 +47,18 @@ _Note: On some systems, it's required to be already logged in as root before exe
 
 Here is a [YouTube video](https://www.youtube.com/watch?v=E8UJhyUFoHM) that illustrates the installation process.
 
-## Firewall setup
+## Let's Encrypt setup
 
-The installation scripts can install and configure a firewall for you. The script will ask whether you want this or not. It is highly recommended to opt-in for the automatic firewall setup.
+The installation scripts can install and configure Let's Encrypt certificate using acme.sh and cloudflare credentials. If you prefer just use system variables:
+* CF_Token
+* CF_Account_ID
+* CF_Zone_ID
+
+```bash
+export CF_Token=''
+export CF_Account_ID=''
+export CF_Zone_ID=''
+```
 
 ## Development & Ops
 
