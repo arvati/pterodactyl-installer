@@ -177,7 +177,7 @@ rm_panel_files() {
     ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
   fi
   # pointing to /dev/null silences the command output
-  systemctl restart nginx >/dev/null
+  systemctl restart nginx >> /dev/null 2>&1
   output "Succesfully removed panel files."
 }
 
