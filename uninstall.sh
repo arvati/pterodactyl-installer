@@ -94,6 +94,42 @@ summary() {
   print_brake 30
 }
 
+password_input() {
+  local __resultvar=$1
+  local result=''
+  local default="$4"
+
+  while [ -z "$result" ]; do
+    echo -n "* ${2}"
+
+    # modified from https://stackoverflow.com/a/22940001
+    while IFS= read -r -s -n1 char; do
+      [[ -z $char ]] && {
+        printf '\n'
+        break
+      }                               # ENTER pressed; output \n and break.
+      if [[ $char == $'\x7f' ]]; then # backspace was pressed
+        # Only if variable is not empty
+        if [ -n "$result" ]; then
+          # Remove last char from output variable.
+          [[ -n $result ]] && result=${result%?}
+          # Erase '*' to the left.
+          printf '\b \b'
+        fi
+      else
+        # Add typed char to output variable.
+        result+=$char
+        # Print '*' in its stead.
+        printf '*'
+      fi
+    done
+    [ -z "$result" ] && [ -n "$default" ] && result="$default"
+    [ -z "$result" ] && print_error "${3}"
+  done
+
+  eval "$__resultvar="'$result'""
+}
+
 ####### OS check funtions #######
 
 detect_distro() {
@@ -216,7 +252,8 @@ rm_cron() {
 
 rm_database() {
   output "Removing database..."
-  valid_db=$(mysql -u root -p -e "SELECT schema_name FROM information_schema.schemata;" | grep -v -E -- 'schema_name|information_schema|performance_schema|mysql')
+  password_input sqlpasswd "Password MySQL root account: " "Password cannot be empty"
+  valid_db=$(mysql -u root -p $sqlpasswd -e "SELECT schema_name FROM information_schema.schemata;" | grep -v -E -- 'schema_name|information_schema|performance_schema|mysql')
   warning "Be careful! This database will be deleted!"
   if [[ "$valid_db" == *"panel"* ]]; then
     echo -n "* Database called panel has been detected. Is it the pterodactyl database? (y/N): "
@@ -238,10 +275,10 @@ rm_database() {
       break
     fi
   done
-  [[ -n "$DATABASE" ]] && mysql -u root -p -e "DROP DATABASE $DATABASE;"
+  [[ -n "$DATABASE" ]] && mysql -u root -p $sqlpasswd -e "DROP DATABASE $DATABASE;"
   # Exclude usernames User and root (Hope no one uses username User)
   output "Removing database user..."
-  valid_users=$(mysql -u root -p -e "SELECT user FROM mysql.user;" | grep -v -E -- 'user|root')
+  valid_users=$(mysql -u root -p $sqlpasswd -e "SELECT user FROM mysql.user;" | grep -v -E -- 'user|root')
   warning "Be careful! This user will be deleted!"
   if [[ "$valid_users" == *"pterodactyl"* ]]; then
     echo -n "* User called pterodactyl has been detected. Is it the pterodactyl user? (y/N): "
@@ -263,8 +300,8 @@ rm_database() {
       break
     fi
   done
-  [[ -n "$DB_USER" ]] && mysql -u root -p -e "DROP USER $DB_USER@'127.0.0.1';"
-  mysql -u root -p -e "FLUSH PRIVILEGES;"
+  [[ -n "$DB_USER" ]] && mysql -u root -p $sqlpasswd -e "DROP USER $DB_USER@'127.0.0.1';"
+  mysql -u root -p $sqlpasswd -e "FLUSH PRIVILEGES;"
   output "Succesfully removed database and database user."
 }
 

@@ -415,28 +415,29 @@ create_database() {
     [ "$OS" == "ol" ] && mysql_secure_installation --use-default
 
     echo "* The script should have asked you to set the MySQL root password earlier (not to be confused with the pterodactyl database user password)"
-    echo "* MySQL will now ask you to enter the password before each command."
+
+    password_input sqlpasswd "Password MySQL root account: " "Password cannot be empty"
 
     print_output "Verifing database user..."
-    valid_users=$(mysql -u root -p -e "SELECT user FROM mysql.user;" | grep -v -E -- 'user|root')
+    valid_users=$(mysql -u root -p $sqlpasswd -e "SELECT user FROM mysql.user;" | grep -v -E -- 'user|root')
     if [[ "$valid_users" == *"${MYSQL_USER}"* ]]; then
       print_warning "Database user '${MYSQL_USER}' already exists!"
       print_output "Removing database user..."
-      mysql -u root -p -e "DROP USER ${MYSQL_USER}@'127.0.0.1';"
+      mysql -u root -p $sqlpasswd -e "DROP USER ${MYSQL_USER}@'127.0.0.1';"
     else
       print_output "Create MySQL user."
-      mysql -u root -p -e "CREATE USER '${MYSQL_USER}'@'127.0.0.1' IDENTIFIED BY '${MYSQL_PASSWORD}';"
+      mysql -u root -p $sqlpasswd -e "CREATE USER '${MYSQL_USER}'@'127.0.0.1' IDENTIFIED BY '${MYSQL_PASSWORD}';"
     fi
 
     print_output "Verifing database name..."
-    valid_db=$(mysql -u root -p -e "SELECT schema_name FROM information_schema.schemata;" | grep -v -E -- 'schema_name|information_schema|performance_schema|mysql')
+    valid_db=$(mysql -u root -p $sqlpasswd -e "SELECT schema_name FROM information_schema.schemata;" | grep -v -E -- 'schema_name|information_schema|performance_schema|mysql')
     if [[ "$valid_db" == *"${MYSQL_DB}"* ]]; then
       warning "Database name '${MYSQL_DB}' already exists!"
       print_output "Removing database ..."
-      mysql -u root -p -e "DROP DATABASE ${MYSQL_DB};"
+      mysql -u root -p $sqlpasswd -e "DROP DATABASE ${MYSQL_DB};"
     else
       print_output "Create database."
-      mysql -u root -p -e "CREATE DATABASE ${MYSQL_DB};"
+      mysql -u root -p $sqlpasswd -e "CREATE DATABASE ${MYSQL_DB};"
     fi
 
     echo "* Grant privileges."
@@ -966,7 +967,7 @@ letsencrypt() {
           --key-file "/etc/letsencrypt/live/$FQDN/privkey.pem" \
           --cert-file "/etc/letsencrypt/live/$FQDN/cert.pem"  \
           --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem" \
-          --reloadcmd "systemctl force-reload nginx" && FAILED=false || FAILED=true
+          --reloadcmd "systemctl force-reload nginx" --force && FAILED=false || FAILED=true
       [ ! -d "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && FAILED=true || FAILED=false
     else
       FAILED=true

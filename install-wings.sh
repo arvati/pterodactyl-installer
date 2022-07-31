@@ -699,7 +699,8 @@ letsencrypt() {
           --issue --dns dns_cf -d "$FQDN" --server letsencrypt \
           --key-file "/etc/letsencrypt/live/$FQDN/privkey.pem" \
           --cert-file "/etc/letsencrypt/live/$FQDN/cert.pem"  \
-          --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem" || FAILED=true
+          --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem"  \
+          --reloadcmd "systemctl force-reload nginx" --force && FAILED=false || FAILED=true
       [ ! -d "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && FAILED=true
     else
       FAILED=true
