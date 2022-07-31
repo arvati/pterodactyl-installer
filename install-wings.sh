@@ -677,7 +677,7 @@ letsencrypt() {
   systemctl stop nginx || true
 
   # Obtain certificate
-  certbot certonly --no-eff-email --email "$EMAIL" --standalone -d "$FQDN" || FAILED=true
+  certbot certonly --non-interactive --no-eff-email --email "$EMAIL" --standalone -d "$FQDN" || FAILED=true
 
   systemctl start nginx || true
 
