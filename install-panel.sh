@@ -144,6 +144,10 @@ print_brake() {
   echo ""
 }
 
+print_output() {
+  echo "* ${1}"
+}
+
 hyperlink() {
   echo -e "\e]8;;${1}\a${1}\e]8;;\a"
 }
@@ -413,17 +417,33 @@ create_database() {
     echo "* The script should have asked you to set the MySQL root password earlier (not to be confused with the pterodactyl database user password)"
     echo "* MySQL will now ask you to enter the password before each command."
 
-    echo "* Create MySQL user."
-    mysql -u root -p -e "CREATE USER '${MYSQL_USER}'@'127.0.0.1' IDENTIFIED BY '${MYSQL_PASSWORD}';" >> /dev/null 2>&1
+    print_output "Verifing database user..."
+    valid_users=$(mysql -u root -e "SELECT user FROM mysql.user;" | grep -v -E -- 'user|root')
+    if [[ "$valid_users" == *"${MYSQL_USER}"* ]]; then
+      print_warning "Database user '${MYSQL_USER}' already exists!"
+      print_output "Removing database user..."
+      mysql -u root -e "DROP USER ${MYSQL_USER}@'127.0.0.1';"
+    else
+      print_output "Create MySQL user."
+      mysql -u root -p -e "CREATE USER '${MYSQL_USER}'@'127.0.0.1' IDENTIFIED BY '${MYSQL_PASSWORD}';"
+    fi
 
-    echo "* Create database."
-    mysql -u root -p -e "CREATE DATABASE ${MYSQL_DB};" >> /dev/null 2>&1
+    print_output "Verifing database name..."
+    valid_db=$(mysql -u root -e "SELECT schema_name FROM information_schema.schemata;" | grep -v -E -- 'schema_name|information_schema|performance_schema|mysql')
+    if [[ "$valid_db" == *"${MYSQL_DB}"* ]]; then
+      warning "Database name '${MYSQL_DB}' already exists!"
+      print_output "Removing database ..."
+      mysql -u root -e "DROP DATABASE ${MYSQL_DB};"
+    else
+      print_output "Create database."
+      mysql -u root -p -e "CREATE DATABASE ${MYSQL_DB};"
+    fi
 
     echo "* Grant privileges."
-    mysql -u root -p -e "GRANT ALL PRIVILEGES ON ${MYSQL_DB}.* TO '${MYSQL_USER}'@'127.0.0.1' WITH GRANT OPTION;" >> /dev/null 2>&1
+    mysql -u root -p -e "GRANT ALL PRIVILEGES ON ${MYSQL_DB}.* TO '${MYSQL_USER}'@'127.0.0.1' WITH GRANT OPTION;"
 
     echo "* Flush privileges."
-    mysql -u root -p -e "FLUSH PRIVILEGES;" >> /dev/null 2>&1
+    mysql -u root -p -e "FLUSH PRIVILEGES;"
   else
     echo "* Performing MySQL queries.."
 
