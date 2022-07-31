@@ -418,22 +418,22 @@ create_database() {
     echo "* MySQL will now ask you to enter the password before each command."
 
     print_output "Verifing database user..."
-    valid_users=$(mysql -u root -e "SELECT user FROM mysql.user;" | grep -v -E -- 'user|root')
+    valid_users=$(mysql -u root -p -e "SELECT user FROM mysql.user;" | grep -v -E -- 'user|root')
     if [[ "$valid_users" == *"${MYSQL_USER}"* ]]; then
       print_warning "Database user '${MYSQL_USER}' already exists!"
       print_output "Removing database user..."
-      mysql -u root -e "DROP USER ${MYSQL_USER}@'127.0.0.1';"
+      mysql -u root -p -e "DROP USER ${MYSQL_USER}@'127.0.0.1';"
     else
       print_output "Create MySQL user."
       mysql -u root -p -e "CREATE USER '${MYSQL_USER}'@'127.0.0.1' IDENTIFIED BY '${MYSQL_PASSWORD}';"
     fi
 
     print_output "Verifing database name..."
-    valid_db=$(mysql -u root -e "SELECT schema_name FROM information_schema.schemata;" | grep -v -E -- 'schema_name|information_schema|performance_schema|mysql')
+    valid_db=$(mysql -u root -p -e "SELECT schema_name FROM information_schema.schemata;" | grep -v -E -- 'schema_name|information_schema|performance_schema|mysql')
     if [[ "$valid_db" == *"${MYSQL_DB}"* ]]; then
       warning "Database name '${MYSQL_DB}' already exists!"
       print_output "Removing database ..."
-      mysql -u root -e "DROP DATABASE ${MYSQL_DB};"
+      mysql -u root -p -e "DROP DATABASE ${MYSQL_DB};"
     else
       print_output "Create database."
       mysql -u root -p -e "CREATE DATABASE ${MYSQL_DB};"
