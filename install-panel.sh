@@ -785,7 +785,7 @@ ol8_dep() {
   dnf install -y --nogpgcheck oracle-epel-release-el8 https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
   dnf install -y --nogpgcheck http://rpms.remirepo.net/enterprise/remi-release-8.rpm
   #dnf module enable php:remi-7.4
-  dnf module reset php
+  dnf module reset -y php
   dnf module enable -y php:remi-8.1
   dnf_update -y
 
