@@ -946,8 +946,8 @@ letsencrypt() {
           --key-file "/etc/letsencrypt/live/$FQDN/privkey.pem" \
           --cert-file "/etc/letsencrypt/live/$FQDN/cert.pem"  \
           --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem" \
-          --reloadcmd "systemctl force-reload nginx" || FAILED=true
-      [ ! -d "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && FAILED=true
+          --reloadcmd "systemctl force-reload nginx" && FAILED=false || FAILED=true
+      [ ! -d "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && FAILED=true || FAILED=false
     else
       FAILED=true
     fi
