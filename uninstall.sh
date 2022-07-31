@@ -150,6 +150,7 @@ check_os_comp() {
     ;;
   ol)
     [ "$OS_VER_MAJOR" == "8" ] && SUPPORTED=true
+    [ "$OS_VER_MAJOR" == "9" ] && SUPPORTED=true
     ;;
   esac
 
