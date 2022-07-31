@@ -1,7 +1,7 @@
 # :bird: pterodactyl-installer
 
 Unofficial scripts for installing Pterodactyl Panel & Wings. Works with the latest version of Pterodactyl!
-Fork from https://github.com/vilhelmprytz/pterodactyl-installer including Oracle Linux 8 Distro
+Fork from https://github.com/vilhelmprytz/pterodactyl-installer including Oracle Linux 8 and 9 Distro
 
 Read more about [Pterodactyl](https://pterodactyl.io/) here. This script is not associated with the official Pterodactyl Project.
 
