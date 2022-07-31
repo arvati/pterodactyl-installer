@@ -23,9 +23,10 @@ List of supported installation setups for panel and Wings (installations support
 ### Supported panel operating systems and webservers
 
 | Operating System | Version | nginx support      | PHP Version |
-| ---------------- | ------- | ------------------ | ----------- |        |
+| ---------------- | ------- | ------------------ | ----------- |
 | Oracle Linux     | 7       | :red_circle:       |             |
-|                  | 8       | :white_check_mark: | 8.0         |
+|                  | 8       | :white_check_mark: | 8.1         |
+|                  | 9       | :white_check_mark: | 8.1         |
 
 ### Supported Wings operating systems
 
@@ -33,7 +34,7 @@ List of supported installation setups for panel and Wings (installations support
 | ---------------- | ------- | ------------------ |
 | Oracle Linux     | 7       | :red_circle:       |
 |                  | 8       | :white_check_mark: |
-
+|                  | 9       | :white_check_mark: |
 
 ## Using the installation scripts
 
@@ -61,33 +62,6 @@ export CF_Zone_ID=''
 ```
 
 ## Development & Ops
-
-### Testing the script locally
-
-To test the script, we use [Vagrant](https://www.vagrantup.com). With Vagrant, you can quickly get a fresh machine up and running to test the script.
-
-If you want to test the script on all supported installations in one go, just run the following.
-
-```bash
-vagrant up
-```
-
-If you only want to test a specific distribution, you can run the following.
-
-```bash
-vagrant up <name>
-```
-
-Replace name with one of the following (supported installations).
-
-- `ubuntu_focal`
-- `ubuntu_bionic`
-- `debian_buster`
-- `debian_stretch`
-- `centos_8`
-- `centos_7`
-
-Then you can use `vagrant ssh <name of machine>` to SSH into the box. The project directory will be mounted in `/vagrant` so you can quickly modify the script locally and then test the changes by running the script from `/vagrant/install_panel.sh` and `/vagrant/install_wings.sh` respectively.
 
 ### Creating a release
 
