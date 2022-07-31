@@ -753,7 +753,7 @@ centos8_dep() {
   dnf install -y policycoreutils selinux-policy selinux-policy-targeted setroubleshoot-server setools setools-console mcstrans
 
   # add remi repo (php8.0)
-  dnf install -y epel-release http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+  dnf install -y --nogpgcheck epel-release http://rpms.remirepo.net/enterprise/remi-release-8.rpm
   dnf module enable -y php:remi-8.0
   dnf_update
 
@@ -782,8 +782,8 @@ ol8_dep() {
   dnf install -y policycoreutils selinux-policy selinux-policy-targeted setroubleshoot-server setools setools-console mcstrans
 
   # add remi repo (php8.0)
-  dnf install -y oracle-epel-release-el8 https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-  dnf install -y http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+  dnf install -y --nogpgcheck oracle-epel-release-el8 https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+  dnf install -y --nogpgcheck http://rpms.remirepo.net/enterprise/remi-release-8.rpm
   #dnf module enable php:remi-7.4
   dnf module reset php
   dnf module enable -y php:remi-8.1
