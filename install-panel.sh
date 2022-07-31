@@ -407,8 +407,7 @@ create_database() {
     echo "* Reload privilege tables now? [Y/n] Y"
     echo "*"
 
-    [ "$OS_VER_MAJOR" == "7" ] && mariadb-secure-installation
-    [ "$OS" == "centos" ] && [ "$OS_VER_MAJOR" == "8" ] && mysql_secure_installation
+    [ "$OS" == "centos" ] && mariadb-secure-installation
     [ "$OS" == "ol" ] && mysql_secure_installation
 
     echo "* The script should have asked you to set the MySQL root password earlier (not to be confused with the pterodactyl database user password)"
