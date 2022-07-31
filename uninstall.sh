@@ -176,8 +176,7 @@ rm_panel_files() {
     rm -f /etc/nginx/sites-available/pterodactyl.conf
     ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
   fi
-  # pointing to /dev/null silences the command output
-  systemctl restart nginx >> /dev/null 2>&1
+  systemctl restart nginx || true
   output "Succesfully removed panel files."
 }
 
