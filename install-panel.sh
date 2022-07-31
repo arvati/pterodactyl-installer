@@ -350,6 +350,7 @@ check_os_comp() {
   ol)
     PHP_SOCKET="/var/run/php-fpm/pterodactyl.sock"
     [ "$OS_VER_MAJOR" == "8" ] && SUPPORTED=true
+    [ "$OS_VER_MAJOR" == "9" ] && SUPPORTED=true
     ;;
   *)
     SUPPORTED=false
@@ -407,7 +408,8 @@ create_database() {
     echo "*"
 
     [ "$OS_VER_MAJOR" == "7" ] && mariadb-secure-installation
-    [ "$OS_VER_MAJOR" == "8" ] && mysql_secure_installation
+    [ "$OS" == "centos" ] && [ "$OS_VER_MAJOR" == "8" ] && mysql_secure_installation
+    [ "$OS" == "ol" ] && mysql_secure_installation
 
     echo "* The script should have asked you to set the MySQL root password earlier (not to be confused with the pterodactyl database user password)"
     echo "* MySQL will now ask you to enter the password before each command."
@@ -555,8 +557,9 @@ enable_services_centos_based() {
 }
 
 enable_services_ol_based() {
-  #systemctl enable mysqld ; systemctl start mysqld
-  systemctl enable mariadb ; systemctl start mariadb
+
+  #systemctl enable mariadb ; systemctl start mariadb
+  systemctl enable mysqld ; systemctl start mysqld
   systemctl enable nginx
   systemctl enable --now redis ; systemctl start redis
 }
@@ -783,15 +786,16 @@ ol8_dep() {
   dnf install -y oracle-epel-release-el8 https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
   dnf install -y http://rpms.remirepo.net/enterprise/remi-release-8.rpm
   #dnf module enable php:remi-7.4
-  dnf module enable -y php:remi-8.0
+  dnf module reset php
+  dnf module enable -y php:remi-8.1
   dnf_update -y
 
   #dnf install -y php php-{common,fpm,cli,json,mysqlnd,gd,mbstring,pdo,zip,bcmath,dom,opcache}
   dnf install -y php php-common php-fpm php-cli php-json php-mysqlnd php-gd php-mbstring php-pdo php-zip php-bcmath php-dom php-opcache
 
   # MariaDB (use from official repo)
-  dnf install -y mariadb mariadb-server
-  #dnf install -y mysql mysql-server
+  #dnf install -y mariadb mariadb-server
+  dnf install -y mysql mysql-server
 
   # Other dependencies
   dnf install -y nginx curl tar zip unzip git
@@ -805,6 +809,42 @@ ol8_dep() {
   selinux_allow
 
   echo "* Dependencies for Oracle Linux 8 installed!"
+}
+
+ol9_dep() {
+  echo "* Installing dependencies for Oracle Linux 9 .."
+
+  # SELinux tools
+  # dnf install -y setroubleshoot-server setools mcstrans
+  dnf install -y policycoreutils selinux-policy selinux-policy-targeted setroubleshoot-server setools setools-console mcstrans
+
+  # add remi repo (php8.1)
+  dnf install -y oracle-epel-release-el9 https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+  dnf install -y http://rpms.remirepo.net/enterprise/remi-release-9.rpm
+  #dnf module enable php:remi-7.4
+  dnf module reset php
+  dnf module enable -y php:remi-8.1
+  dnf_update -y
+
+  #dnf install -y php php-{common,fpm,cli,json,mysqlnd,gd,mbstring,pdo,zip,bcmath,dom,opcache}
+  dnf install -y php php-common php-fpm php-cli php-json php-mysqlnd php-gd php-mbstring php-pdo php-zip php-bcmath php-dom php-opcache
+
+  # MariaDB (use from official repo)
+  #dnf install -y mariadb mariadb-server
+  dnf install -y mysql mysql-server
+
+  # Other dependencies
+  dnf install -y nginx curl tar zip unzip git
+  dnf module install -y redis:6
+
+  # Enable services
+  #enable_services_centos_based
+  enable_services_ol_based
+
+  # SELinux (allow nginx and redis)
+  selinux_allow
+
+  echo "* Dependencies for Oracle Linux 9 installed!"
 }
 
 ##### OTHER OS SPECIFIC FUNCTIONS #####
@@ -845,7 +885,7 @@ firewall_firewalld() {
 
   # Install
   [ "$OS_VER_MAJOR" == "7" ] && yum -y install firewalld >/dev/null
-  [ "$OS_VER_MAJOR" == "8" ] && dnf -y install firewalld >/dev/null
+  [ "$OS_VER_MAJOR" == "8" ] || [ "$OS_VER_MAJOR" == "9" ] && dnf -y install firewalld >/dev/null
 
   # Enable
   systemctl --now enable firewalld >/dev/null # Enable and start
@@ -870,13 +910,22 @@ letsencrypt() {
     apt-get -y install certbot python3-certbot-nginx socat
     ;;
   centos | ol)
-    [ "$OS_VER_MAJOR" == "7" ] && yum -y install certbot python-certbot-nginx socat
-    [ "$OS_VER_MAJOR" == "8" ] && dnf -y install certbot python3-certbot-nginx socat
+    [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install epel-release
+    [ "$OS_VER_MAJOR" == "7" ] && yum -y install certbot python3-certbot-nginx socat
+
+    [ "$OS_VER_MAJOR" == "8" ] && dnf -q install -y oracle-epel-release-el8 https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+    [ "$OS_VER_MAJOR" == "8" ] && dnf -y -q install certbot python3-certbot-nginx socat
+
+    [ "$OS_VER_MAJOR" == "9" ] && dnf -q install -y oracle-epel-release-el9 https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+    [ "$OS_VER_MAJOR" == "9" ] && dnf -y -q install certbot python3-certbot-nginx socat
+    
     ;;
   esac
 
+
   # Obtain certificate
   certbot --nginx --redirect --no-eff-email --email "$email" -d "$FQDN" || FAILED=true
+
 
   # Check if it succeded
   if [ ! -d "/etc/letsencrypt/live/$FQDN/" ] || [ "$FAILED" == true ]; then
@@ -1004,11 +1053,12 @@ perform_install() {
     ;;
 
   ol)
-    [ "$OS_VER_MAJOR" == "8" ] && dnf_update
+    dnf_update
 
     [ "$CONFIGURE_FIREWALL_CMD" == true ] && firewall_firewalld
 
     [ "$OS_VER_MAJOR" == "8" ] && ol8_dep
+    [ "$OS_VER_MAJOR" == "9" ] && ol9_dep
     ;;
 
   esac

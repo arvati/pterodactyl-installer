@@ -280,6 +280,7 @@ check_os_comp() {
     ;;
   ol)
     [ "$OS_VER_MAJOR" == "8" ] && SUPPORTED=true
+    [ "$OS_VER_MAJOR" == "9" ] && SUPPORTED=true
     ;;
   *)
     SUPPORTED=false
@@ -313,7 +314,7 @@ check_os_comp() {
 
       # install virt-what
       yum -q -y install virt-what
-    elif [ "$OS_VER_MAJOR" == "8" ]; then
+    elif [ "$OS_VER_MAJOR" == "8" ] || [ "$OS_VER_MAJOR" == "9" ]; then
       dnf -y -q update
 
       # install virt-what
@@ -372,7 +373,7 @@ enable_docker() {
 
 install_golang() {
   if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
-    if [ "$OS_VER_MAJOR" == "8" ]; then
+    if [ "$OS_VER_MAJOR" == "8" ] || [ "$OS_VER_MAJOR" == "9" ]; then
       dnf module -y install upx
       curl -o go.tar.gz $GO_DL_URL
       rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz
@@ -419,7 +420,7 @@ install_docker() {
 
       # Install Docker
       yum install -y docker-ce docker-ce-cli containerd.io
-    elif [ "$OS_VER_MAJOR" == "8" ]; then
+    elif [ "$OS_VER_MAJOR" == "8" ] || [ "$OS_VER_MAJOR" == "9" ]; then
       # Install dependencies for Docker
       dnf install -y dnf-utils device-mapper-persistent-data lvm2
 
@@ -486,20 +487,27 @@ install_mariadb() {
     fi
     [ "$OS_VER_MAJOR" == "9" ] && curl -sS $MARIADB_URL | sudo bash
     apt install -y mariadb-server
+    systemctl enable mariadb ; systemctl start mariadb
     ;;
   ubuntu)
     [ "$OS_VER_MAJOR" == "18" ] && curl -sS $MARIADB_URL | sudo bash
     apt install -y mariadb-server
+    systemctl enable mariadb ; systemctl start mariadb
     ;;
-  centos | ol)
+  centos)
     [ "$OS_VER_MAJOR" == "7" ] && curl -sS $MARIADB_URL | bash
     [ "$OS_VER_MAJOR" == "7" ] && yum -y install mariadb-server
     [ "$OS_VER_MAJOR" == "8" ] && dnf install -y mariadb mariadb-server
+    systemctl enable mariadb ; systemctl start mariadb
     #dnf install -y mysql mysql-server
     #systemctl enable mysqld ; systemctl start mysqld
     ;;
+  ol)
+    dnf install -y mysql mysql-server
+    systemctl enable mysqld ; systemctl start mysqld
+    ;;
   esac
-  systemctl enable mariadb ; systemctl start mariadb
+
 }
 
 ask_database_user() {
@@ -619,7 +627,7 @@ firewall_firewalld() {
 
   # Install
   [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install firewalld >/dev/null
-  [ "$OS_VER_MAJOR" == "8" ] && dnf -y -q install firewalld >/dev/null
+  [ "$OS_VER_MAJOR" == "8" ] || [ "$OS_VER_MAJOR" == "9" ] && dnf -y -q install firewalld >/dev/null
 
   # Enable
   systemctl --now enable firewalld >/dev/null # Enable and start
@@ -652,6 +660,9 @@ letsencrypt() {
 
     [ "$OS_VER_MAJOR" == "8" ] && dnf -q install -y oracle-epel-release-el8 https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
     [ "$OS_VER_MAJOR" == "8" ] && dnf -y -q install certbot python3-certbot-nginx socat
+
+    [ "$OS_VER_MAJOR" == "9" ] && dnf -q install -y oracle-epel-release-el9 https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+    [ "$OS_VER_MAJOR" == "9" ] && dnf -y -q install certbot python3-certbot-nginx socat
 
   else
     # exit
@@ -701,7 +712,8 @@ perform_install() {
   echo "* Installing pterodactyl wings.."
   [ "$OS" == "ubuntu" ] || [ "$OS" == "debian" ] && apt_update
   [ "$OS" == "centos" ] && [ "$OS_VER_MAJOR" == "7" ] && yum_update
-  [ "$OS" == "centos" ] || [ "$OS" == "ol" ] && [ "$OS_VER_MAJOR" == "8" ] && dnf_update
+  [ "$OS" == "centos" ] && [ "$OS_VER_MAJOR" == "8" ] && dnf_update
+  [ "$OS" == "ol" ] && dnf_update
 
   [ "$CONFIGURE_UFW" == true ] && firewall_ufw
   [ "$CONFIGURE_FIREWALL_CMD" == true ] && firewall_firewalld
@@ -787,8 +799,8 @@ main() {
     fi
   fi
 
-  # Compile from source is available for Oracle Linux 8 on Ampere arm64 machines
-  if [ "$OS" == "ol" ] && [ "$OS_VER_MAJOR" == "8" ] && [ "$ARCH" == "arm64" ]; then
+  # Compile from source is available for Oracle Linux on Ampere arm64 machines
+  if [ "$OS" == "ol" ] && [ "$ARCH" == "arm64" ]; then
     echo -e -n "* Do you want to compile wings from source unstable ? (y/N): "
     read -r CONFIRM_COMPILE_WINGS
 
