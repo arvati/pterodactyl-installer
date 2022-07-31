@@ -87,18 +87,22 @@ PANEL_CANARY="$GITHUB_BASE_URL/master/install-panel.sh"
 
 WINGS_CANARY="$GITHUB_BASE_URL/master/install-wings.sh"
 
+UNINSTALL_CANARY="$GITHUB_BASE_URL/master/uninstall.sh"
+
 
 while [ "$done" == false ]; do
   options=(
     "Install panel with canary version of the script"
     "Install Wings with canary version of the script"
     "Install both [0] and [1] on the same machine (wings script runs after panel)"
+    "Uninstall previous instalation with canary version of the script"
   )
 
   actions=(
     "$PANEL_CANARY"
     "$WINGS_CANARY"
     "$PANEL_CANARY;$WINGS_CANARY"
+    "$UNINSTALL_CANARY"
   )
   
   output "What would you like to do?"
