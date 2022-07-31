@@ -408,22 +408,22 @@ create_database() {
     echo "*"
 
     [ "$OS" == "centos" ] && mariadb-secure-installation
-    [ "$OS" == "ol" ] && mysql_secure_installation
+    [ "$OS" == "ol" ] && mysql_secure_installation --use-default
 
     echo "* The script should have asked you to set the MySQL root password earlier (not to be confused with the pterodactyl database user password)"
     echo "* MySQL will now ask you to enter the password before each command."
 
     echo "* Create MySQL user."
-    mysql -u root -p -e "CREATE USER '${MYSQL_USER}'@'127.0.0.1' IDENTIFIED BY '${MYSQL_PASSWORD}';"
+    mysql -u root -p -e "CREATE USER '${MYSQL_USER}'@'127.0.0.1' IDENTIFIED BY '${MYSQL_PASSWORD}';" >> /dev/null 2>&1
 
     echo "* Create database."
-    mysql -u root -p -e "CREATE DATABASE ${MYSQL_DB};"
+    mysql -u root -p -e "CREATE DATABASE ${MYSQL_DB};" >> /dev/null 2>&1
 
     echo "* Grant privileges."
-    mysql -u root -p -e "GRANT ALL PRIVILEGES ON ${MYSQL_DB}.* TO '${MYSQL_USER}'@'127.0.0.1' WITH GRANT OPTION;"
+    mysql -u root -p -e "GRANT ALL PRIVILEGES ON ${MYSQL_DB}.* TO '${MYSQL_USER}'@'127.0.0.1' WITH GRANT OPTION;" >> /dev/null 2>&1
 
     echo "* Flush privileges."
-    mysql -u root -p -e "FLUSH PRIVILEGES;"
+    mysql -u root -p -e "FLUSH PRIVILEGES;" >> /dev/null 2>&1
   else
     echo "* Performing MySQL queries.."
 
