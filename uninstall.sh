@@ -264,7 +264,7 @@ rm_database() {
     fi
   done
   [[ -n "$DB_USER" ]] && mysql -u root -p -e "DROP USER $DB_USER@'127.0.0.1';"
-  mysql -u root -e "FLUSH PRIVILEGES;"
+  mysql -u root -p -e "FLUSH PRIVILEGES;"
   output "Succesfully removed database and database user."
 }
 
