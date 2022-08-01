@@ -379,6 +379,7 @@ install_golang() {
       curl -s -L -o go.tar.gz $GO_DL_URL
       rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz
       echo 'export PATH=$PATH:/usr/local/go/bin' > /etc/profile.d/go.sh
+      rm -fr go.tar.gz
     fi
   fi
   echo "* Golang has now been installed."
@@ -468,9 +469,11 @@ wings_compile() {
   upx --brute build/wings_*
   sudo cp build/wings_linux_arm64 /usr/local/bin/wings
   chmod u+x /usr/local/bin/wings
-  echo 'export PATH=$PATH:/usr/local/bin/wings' > /etc/profile.d/wings.sh
+  echo 'export PATH=$PATH:/usr/local/bin' > /etc/profile.d/wings.sh
   mkdir -p /etc/pterodactyl
   echo "* Done."
+  cd ..
+  rm -fr wings
 }
 
 systemd_file() {
@@ -650,8 +653,8 @@ firewall_firewalld() {
   [ "$CONFIGURE_LETSENCRYPT" == true ] && firewall-cmd --add-service=https --permanent -q # Port 443
   [ "$CONFIGURE_DB_FIREWALL" == true ] && firewall-cmd --add-service=mysql --permanent -q # Port 3306
 
-  firewall-cmd --permanent --zone=trusted --change-interface=pterodactyl0 -q
-  firewall-cmd --zone=trusted --add-masquerade --permanent
+  #firewall-cmd --permanent --zone=trusted --change-interface=pterodactyl0 -q
+  #firewall-cmd --zone=trusted --add-masquerade --permanent -q
   firewall-cmd --reload -q # Enable firewall
 
   echo "* Firewall-cmd installed"
@@ -742,6 +745,18 @@ perform_install() {
   [ "$INSTALL_MARIADB" == true ] && install_mariadb
   [ "$CONFIGURE_DBHOST" == true ] && configure_mysql
   [ "$CONFIGURE_LETSENCRYPT" == true ] && letsencrypt
+
+  if [ "$CONFIGURE_FIREWALL_CMD" == true ]; then
+    firewall-cmd --zone=trusted --remove-interface=pterodactyl0 -q
+    firewall-cmd --zone=trusted --remove-interface=pterodactyl0 --permanent -q
+    firewall-cmd --reload -q
+    rm -fr /etc/pterodactyl/config.yml
+    # force execute one time without config and free interface pterodactyl0
+    /usr/local/bin/wings
+    firewall-cmd --permanent --zone=trusted --change-interface=pterodactyl0 -q
+    firewall-cmd --zone=trusted --add-masquerade --permanent -q
+    firewall-cmd --reload -q # Enable firewall
+  fi
 
   # return true if script has made it this far
   return 0

@@ -23,6 +23,8 @@ ls -la /var/lib/pterodactyl/volumes/
 cat /var/log/pterodactyl/wings.log
 
 
+curl -o go.tar.gz https://go.dev/dl/go1.18.4.linux-arm64.tar.gz
+
 sudo mv /usr/local/bin/wings /usr/local/bin/wings.old
 sudo cp build/wings_linux_arm64 /usr/local/bin/wings
 sudo chmod u+x /usr/local/bin/wings
