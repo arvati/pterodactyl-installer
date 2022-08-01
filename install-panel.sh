@@ -52,7 +52,7 @@ SCRIPT_RELEASE="canary"
 FQDN=""
 
 # Default MySQL credentials
-MYSQL_DB="pterodactyl"
+MYSQL_DB="panel"
 MYSQL_USER="pterodactyl"
 MYSQL_PASSWORD=""
 
