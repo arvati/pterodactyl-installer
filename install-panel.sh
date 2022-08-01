@@ -91,7 +91,7 @@ email_regex="^(([A-Za-z0-9]+((\.|\-|\_|\+)?[A-Za-z0-9]?)*[A-Za-z0-9]+)|[A-Za-z0-
 
 # define version using information from GitHub
 get_latest_release() {
-  curl --silent "https://api.github.com/repos/$1/releases/latest" | # Get latest release from GitHub api
+  curl --silent -L "https://api.github.com/repos/$1/releases/latest" | # Get latest release from GitHub api
     grep '"tag_name":' |                                            # Get tag line
     sed -E 's/.*"([^"]+)".*/\1/'                                    # Pluck JSON value
 }
@@ -376,7 +376,7 @@ check_os_comp() {
 # Install composer
 install_composer() {
   echo "* Installing composer.."
-  curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+  curl -sS -L https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
   echo "* Composer installed!"
 }
 
@@ -386,7 +386,7 @@ ptdl_dl() {
   mkdir -p /var/www/pterodactyl
   cd /var/www/pterodactyl || exit
 
-  curl -Lo panel.tar.gz "$PANEL_DL_URL"
+  curl -s -Lo panel.tar.gz "$PANEL_DL_URL"
   tar -xzvf panel.tar.gz
   chmod -R 755 storage/* bootstrap/cache/
 
@@ -532,7 +532,7 @@ insert_cronjob() {
 install_pteroq() {
   echo "* Installing pteroq service.."
 
-  curl -o /etc/systemd/system/pteroq.service $GITHUB_BASE_URL/configs/pteroq.service
+  curl -s -L -o /etc/systemd/system/pteroq.service $GITHUB_BASE_URL/configs/pteroq.service
 
   case "$OS" in
   debian | ubuntu)
@@ -651,7 +651,7 @@ ubuntu18_dep() {
   LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 
   # Add the MariaDB repo (bionic has mariadb version 10.1 and we need newer than that)
-  curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | sudo bash
+  curl -sS -L https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | sudo bash
 
   # Update repositories list
   apt_update
@@ -673,11 +673,11 @@ debian_stretch_dep() {
 
   # install PHP 8.0 using sury's repo instead of PPA
   apt install ca-certificates apt-transport-https lsb-release -y
-  curl -o /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+  curl -s -L -o /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
   echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/php.list
 
   # Add the MariaDB repo (oldstable has mariadb version 10.1 and we need newer than that)
-  curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
+  curl -sS -L https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
 
   # Update repositories list
   apt_update
@@ -700,7 +700,7 @@ debian_buster_dep() {
   # install PHP 8.0 using sury's repo instead of default 7.2 package (in buster repo)
   # this guide shows how: https://vilhelmprytz.se/2018/08/22/install-php72-on-Debian-8-and-9.html
   apt install ca-certificates apt-transport-https lsb-release -y
-  curl -o /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+  curl -s -L -o /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
   echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/php.list
 
   # Update repositories list
@@ -724,7 +724,7 @@ debian_dep() {
   # install PHP 8.0 using sury's repo instead of default 7.2 package (in buster repo)
   # this guide shows how: https://vilhelmprytz.se/2018/08/22/install-php72-on-Debian-8-and-9.html
   apt install ca-certificates apt-transport-https lsb-release -y
-  curl -o /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+  curl -s -L -o /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
   echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/php.list
 
   # Update repositories list
@@ -753,7 +753,7 @@ centos7_dep() {
   yum_update
 
   # Install MariaDB
-  curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | sudo bash
+  curl -sS -L https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | sudo bash
 
   # Install dependencies
   yum -y install php php-common php-tokenizer php-curl php-fpm php-cli php-json php-mysqlnd php-mcrypt php-gd php-mbstring php-pdo php-zip php-bcmath php-dom php-opcache mariadb-server nginx curl tar zip unzip git redis
@@ -877,7 +877,7 @@ centos_php() {
 }
 
 ol_php() {
-  curl -o /etc/php-fpm.d/www-pterodactyl.conf $GITHUB_BASE_URL/configs/www-pterodactyl.conf
+  curl -s -L -o /etc/php-fpm.d/www-pterodactyl.conf $GITHUB_BASE_URL/configs/www-pterodactyl.conf
 
   systemctl enable php-fpm
   systemctl start php-fpm
@@ -957,10 +957,9 @@ letsencrypt() {
       required_input CF_Token "Cloudflare Token: " "Token cannot be empty"
       required_input CF_Account_ID "Cloudflare Account ID: " "Account cannot be empty"
       required_input CF_Zone_ID "Cloudflare Zone ID: " "Zone cannot be empty"
-      curl https://get.acme.sh | sh -s email="$email"
       FAILED=false
       mkdir -p "/etc/letsencrypt/live/$FQDN/"
-      curl https://get.acme.sh | sh -s email="$email" 
+      curl -s -L https://get.acme.sh | sh -s email="$email" 
       /root/.acme.sh/acme.sh --set-default-ca --server letsencrypt
       CF_Token="$CF_Token" CF_Account_ID="$CF_Account_ID" CF_Zone_ID="$CF_Zone_ID" /root/.acme.sh/acme.sh \
           --issue --dns dns_cf -d "$FQDN" --server letsencrypt \
@@ -1007,7 +1006,7 @@ configure_nginx() {
 
     # download new config
     rm -rf /etc/nginx/conf.d/pterodactyl.conf
-    curl -o /etc/nginx/conf.d/pterodactyl.conf $GITHUB_BASE_URL/configs/$DL_FILE
+    curl -s -L -o /etc/nginx/conf.d/pterodactyl.conf $GITHUB_BASE_URL/configs/$DL_FILE
 
     # replace all <domain> places with the correct domain
     sed -i -e "s@<domain>@${FQDN}@g" /etc/nginx/conf.d/pterodactyl.conf
@@ -1019,7 +1018,7 @@ configure_nginx() {
     rm -rf /etc/nginx/sites-enabled/default
 
     # download new config
-    curl -o /etc/nginx/sites-available/pterodactyl.conf $GITHUB_BASE_URL/configs/$DL_FILE
+    curl -s -L -o /etc/nginx/sites-available/pterodactyl.conf $GITHUB_BASE_URL/configs/$DL_FILE
 
     # replace all <domain> places with the correct domain
     sed -i -e "s@<domain>@${FQDN}@g" /etc/nginx/sites-available/pterodactyl.conf
@@ -1156,7 +1155,7 @@ main() {
   )
   password_input MYSQL_PASSWORD "Password (press enter to use randomly generated password): " "MySQL password cannot be empty" "$rand_pw"
 
-  readarray -t valid_timezones <<<"$(curl -s $GITHUB_BASE_URL/configs/valid_timezones.txt)"
+  readarray -t valid_timezones <<<"$(curl -s -L $GITHUB_BASE_URL/configs/valid_timezones.txt)"
   echo "* List of valid timezones here $(hyperlink "https://www.php.net/manual/en/timezones.php")"
 
   while [ -z "$timezone" ]; do
@@ -1200,7 +1199,7 @@ main() {
   fi
 
   # verify FQDN if user has selected to assume SSL or configure Let's Encrypt
-  [ "$CONFIGURE_LETSENCRYPT" == true ] || [ "$ASSUME_SSL" == true ] && bash <(curl -s $GITHUB_BASE_URL/lib/verify-fqdn.sh) "$FQDN" "$OS"
+  [ "$CONFIGURE_LETSENCRYPT" == true ] || [ "$ASSUME_SSL" == true ] && bash <(curl -s -L $GITHUB_BASE_URL/lib/verify-fqdn.sh) "$FQDN" "$OS"
 
   # summary
   summary

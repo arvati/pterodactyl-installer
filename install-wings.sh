@@ -57,7 +57,7 @@ fi
 WINGS_GITHUB_BASE="github.com/pterodactyl/wings"
 WINGS_DL_BASE_URL="https://$WINGS_GITHUB_BASE/releases/latest/download/wings_linux_"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/arvati/pterodactyl-installer/$GITHUB_SOURCE"
-GO_DL_URL="https://go.dev/dl/go1.18.3.linux-arm64.tar.gz"
+GO_DL_URL="https://go.dev/dl/go1.18.4.linux-arm64.tar.gz"
 
 
 COLOR_RED='\033[0;31m'
@@ -94,7 +94,7 @@ regex="^(([A-Za-z0-9]+((\.|\-|\_|\+)?[A-Za-z0-9]?)*[A-Za-z0-9]+)|[A-Za-z0-9]+)@(
 #################################
 
 get_latest_release() {
-  curl --silent "https://api.github.com/repos/$1/releases/latest" | # Get latest release from GitHub api
+  curl --silent -L "https://api.github.com/repos/$1/releases/latest" | # Get latest release from GitHub api
     grep '"tag_name":' |                                            # Get tag line
     sed -E 's/.*"([^"]+)".*/\1/'                                    # Pluck JSON value
 }
@@ -375,7 +375,8 @@ install_golang() {
   if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
     if [ "$OS_VER_MAJOR" == "8" ] || [ "$OS_VER_MAJOR" == "9" ]; then
       dnf module -y install upx
-      curl -o go.tar.gz $GO_DL_URL
+      rm -fr go.tar.gz
+      curl -s -L -o go.tar.gz $GO_DL_URL
       rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz
       echo 'export PATH=$PATH:/usr/local/go/bin' > /etc/profile.d/go.sh
     fi
@@ -441,7 +442,7 @@ ptdl_dl() {
   echo "* Installing Pterodactyl Wings .. "
 
   mkdir -p /etc/pterodactyl
-  curl -L -o /usr/local/bin/wings "$WINGS_DL_BASE_URL$ARCH"
+  curl -s -L -o /usr/local/bin/wings "$WINGS_DL_BASE_URL$ARCH"
 
   chmod u+x /usr/local/bin/wings
   echo 'export PATH=$PATH:/usr/local/bin/wings' > /etc/profile.d/wings.sh
@@ -451,6 +452,7 @@ ptdl_dl() {
 
 wings_compile() {
   echo "* Compiling Pterodactyl Wings .. "
+  dnf install -y -q git
   git clone "https://$WINGS_GITHUB_BASE.git"
   cd wings
   rm -rf build/wings_*
@@ -472,7 +474,7 @@ wings_compile() {
 
 systemd_file() {
   echo "* Installing systemd service.."
-  curl -o /etc/systemd/system/wings.service $GITHUB_BASE_URL/configs/wings.service
+  curl -s -L -o /etc/systemd/system/wings.service $GITHUB_BASE_URL/configs/wings.service
   systemctl daemon-reload
   systemctl enable wings
   echo "* Installed systemd service!"
@@ -487,17 +489,17 @@ install_mariadb() {
       print_warning "MariaDB doesn't support Debian on arm64"
       return
     fi
-    [ "$OS_VER_MAJOR" == "9" ] && curl -sS $MARIADB_URL | sudo bash
+    [ "$OS_VER_MAJOR" == "9" ] && curl -sS -L $MARIADB_URL | sudo bash
     apt install -y mariadb-server
     systemctl enable mariadb ; systemctl start mariadb
     ;;
   ubuntu)
-    [ "$OS_VER_MAJOR" == "18" ] && curl -sS $MARIADB_URL | sudo bash
+    [ "$OS_VER_MAJOR" == "18" ] && curl -sS -L $MARIADB_URL | sudo bash
     apt install -y mariadb-server
     systemctl enable mariadb ; systemctl start mariadb
     ;;
   centos)
-    [ "$OS_VER_MAJOR" == "7" ] && curl -sS $MARIADB_URL | bash
+    [ "$OS_VER_MAJOR" == "7" ] && curl -sS -L $MARIADB_URL | bash
     [ "$OS_VER_MAJOR" == "7" ] && yum -y install mariadb-server
     [ "$OS_VER_MAJOR" == "8" ] && dnf install -y mariadb mariadb-server
     systemctl enable mariadb ; systemctl start mariadb
@@ -697,7 +699,7 @@ letsencrypt() {
       required_input CF_Zone_ID "Cloudflare Zone ID: " "Zone cannot be empty"
       FAILED=false
       mkdir -p "/etc/letsencrypt/live/$FQDN/"
-      curl https://get.acme.sh | sh -s email="$EMAIL" 
+      curl -s -L https://get.acme.sh | sh -s email="$EMAIL" 
       /root/.acme.sh/acme.sh --set-default-ca --server letsencrypt
       CF_Token="$CF_Token" CF_Account_ID="$CF_Account_ID" CF_Zone_ID="$CF_Zone_ID" /root/.acme.sh/acme.sh \
           --issue --dns dns_cf -d "$FQDN" --server letsencrypt \
@@ -845,7 +847,7 @@ main() {
       ASK=false
 
       [ -z "$FQDN" ] && print_error "FQDN cannot be empty"                                                            # check if FQDN is empty
-      bash <(curl -s $GITHUB_BASE_URL/lib/verify-fqdn.sh) "$FQDN" "$OS" || ASK=true                                   # check if FQDN is valid
+      bash <(curl -s -L $GITHUB_BASE_URL/lib/verify-fqdn.sh) "$FQDN" "$OS" || ASK=true                                   # check if FQDN is valid
       [ -d "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && print_error "A certificate with this FQDN already exists!" && ASK=true # check if cert exists
 
       [ "$ASK" == true ] && FQDN=""
