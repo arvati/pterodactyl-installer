@@ -973,7 +973,7 @@ letsencrypt() {
       FAILED=true
     fi
 
-    if [ ! -d "/etc/letsencrypt/live/$FQDN/" ] || [ "$FAILED" == true ]; then
+    if [ ! -d "/etc/letsencrypt/live/$FQDN/" ] || [ $FAILED == true ]; then
       print_warning "Process of obtaining a SSL certificate not completed!"
       echo -n "* Still assume SSL? (y/N): "
       read -r CONFIGURE_SSL
