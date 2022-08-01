@@ -444,6 +444,7 @@ ptdl_dl() {
   curl -L -o /usr/local/bin/wings "$WINGS_DL_BASE_URL$ARCH"
 
   chmod u+x /usr/local/bin/wings
+  echo 'export PATH=$PATH:/usr/local/bin/wings' > /etc/profile.d/wings.sh
 
   echo "* Done."
 }
@@ -464,6 +465,7 @@ wings_compile() {
   upx --brute build/wings_*
   sudo cp build/wings_linux_arm64 /usr/local/bin/wings
   chmod u+x /usr/local/bin/wings
+  echo 'export PATH=$PATH:/usr/local/bin/wings' > /etc/profile.d/wings.sh
   mkdir -p /etc/pterodactyl
   echo "* Done."
 }

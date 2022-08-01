@@ -1006,6 +1006,7 @@ configure_nginx() {
     rm -rf /etc/nginx/conf.d/default
 
     # download new config
+    rm -rf /etc/nginx/conf.d/pterodactyl.conf
     curl -o /etc/nginx/conf.d/pterodactyl.conf $GITHUB_BASE_URL/configs/$DL_FILE
 
     # replace all <domain> places with the correct domain

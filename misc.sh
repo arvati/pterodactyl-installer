@@ -22,36 +22,11 @@ ls -la /var/lib/pterodactyl/volumes/
 #setsid /usr/local/bin/wings >/dev/null 2>&1 < /dev/null &
 cat /var/log/pterodactyl/wings.log
 
-sudo su
-wget https://golang.org/dl/go1.16.6.linux-arm64.tar.gz
-rm -rf /usr/local/go && tar -C /usr/local -xzf go1.16.6.linux-arm64.tar.gz
 
-type /usr/local/go/bin/go
-
-/etc/profile.d/go.sh
-export PATH=$PATH:/usr/local/go/bin
-
-cd /root
-git clone https://github.com/pterodactyl/wings.git
-cd /root/wings
-rm -rf build/wings_*
-/usr/local/go/bin/go mod download
-export GIT_HEAD=$(git rev-parse HEAD | head -c8)
-#export GIT_HEAD=f4220816
-CGO_ENABLED=0 GOOS=linux GOARCH=arm64 /usr/local/go/bin/go build \
-    -ldflags="-s -w -X github.com/pterodactyl/wings/system.Version=$GIT_HEAD" \
-    -v \
-    -trimpath \
-    -o build/wings_linux_arm64 \
-    wings.go
-dnf install -y upx
-upx --brute build/wings_*
-build/wings_linux_arm64 version
 sudo mv /usr/local/bin/wings /usr/local/bin/wings.old
 sudo cp build/wings_linux_arm64 /usr/local/bin/wings
 sudo chmod u+x /usr/local/bin/wings
 sudo /usr/local/bin/wings version
-
 
 
 sudo su
@@ -148,3 +123,28 @@ listen.owner = nginx
 listen.group = nginx
 listen.mode = 0660
 
+
+
+cat /etc/nginx/conf.d/pterodactyl.conf
+rm -rf /etc/nginx/conf.d/pterodactyl.conf
+curl -o /etc/nginx/conf.d/pterodactyl.conf https://raw.githubusercontent.com/arvati/pterodactyl-installer/master/configs/nginx_ssl.conf
+sed -i -e "s@<domain>@DOMAIN@g" /etc/nginx/conf.d/pterodactyl.conf
+sed -i -e "s@<php_socket>@/var/run/php-fpm/pterodactyl.sock@g" /etc/nginx/conf.d/pterodactyl.conf
+
+ls /var/www/pterodactyl -la
+cat /var/www/pterodactyl/.env
+
+cat /etc/pterodactyl/config.yml
+/usr/local/bin/wings
+systemctl start wings
+sudo systemctl start docker
+
+firewall-cmd --get-active-zones
+
+sudo firewall-cmd --get-zone-of-interface=pterodactyl0
+sudo firewall-cmd --zone=trusted --remove-interface=pterodactyl0
+sudo firewall-cmd --zone=trusted --remove-interface=pterodactyl0 --permanent
+sudo firewall-cmd --reload -q
+
+
+curl -L -o /usr/local/bin/wings https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_arm64
