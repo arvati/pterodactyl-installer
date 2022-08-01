@@ -968,12 +968,10 @@ letsencrypt() {
           --cert-file "/etc/letsencrypt/live/$FQDN/cert.pem"  \
           --fullchain-file "/etc/letsencrypt/live/$FQDN/fullchain.pem" \
           --reloadcmd "systemctl force-reload nginx" --force && FAILED=false || FAILED=true
-      [ ! -d "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && FAILED=true || FAILED=false
+      [ ! -f "/etc/letsencrypt/live/$FQDN/privkey.pem" ] && FAILED=true || FAILED=false
     else
       FAILED=true
     fi
-    print_output "Folder /etc/letsencrypt/live/$FQDN/"
-    print_output "Failed = $FAILED"
 
     if [ ! -d "/etc/letsencrypt/live/$FQDN/" ] || [ $FAILED == true ]; then
       print_warning "Process of obtaining a SSL certificate not completed!"

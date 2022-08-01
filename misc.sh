@@ -148,5 +148,3 @@ listen.owner = nginx
 listen.group = nginx
 listen.mode = 0660
 
-
-
