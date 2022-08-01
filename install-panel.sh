@@ -432,7 +432,7 @@ create_database() {
     print_output "Verifing database name..."
     valid_db=$(mysql -u root -p${sqlpasswd} -e "SELECT schema_name FROM information_schema.schemata;" | grep -v -E -- 'schema_name|information_schema|performance_schema|mysql')
     if [[ "$valid_db" == *"${MYSQL_DB}"* ]]; then
-      warning "Database name '${MYSQL_DB}' already exists!"
+      print_warning "Database name '${MYSQL_DB}' already exists!"
       print_output "Removing database ..."
       mysql -u root -p${sqlpasswd} -e "DROP DATABASE ${MYSQL_DB};"
     else
