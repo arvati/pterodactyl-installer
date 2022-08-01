@@ -374,7 +374,7 @@ enable_docker() {
 install_golang() {
   if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
     if [ "$OS_VER_MAJOR" == "8" ] || [ "$OS_VER_MAJOR" == "9" ]; then
-      dnf module -y install upx
+      dnf -y -q install upx
       rm -fr go.tar.gz
       curl -s -L -o go.tar.gz $GO_DL_URL
       rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz
@@ -453,7 +453,8 @@ ptdl_dl() {
 wings_compile() {
   echo "* Compiling Pterodactyl Wings .. "
   dnf install -y -q git
-  git clone "https://$WINGS_GITHUB_BASE.git"
+  rm -fr wings
+  git clone "https://$WINGS_GITHUB_BASE.git" wings
   cd wings
   rm -rf build/wings_*
   /usr/local/go/bin/go mod download
