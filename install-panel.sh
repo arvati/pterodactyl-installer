@@ -972,6 +972,8 @@ letsencrypt() {
     else
       FAILED=true
     fi
+    print_output "Folder /etc/letsencrypt/live/$FQDN/"
+    print_output "Failed = $FAILED"
 
     if [ ! -d "/etc/letsencrypt/live/$FQDN/" ] || [ $FAILED == true ]; then
       print_warning "Process of obtaining a SSL certificate not completed!"

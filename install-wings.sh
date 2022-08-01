@@ -547,22 +547,24 @@ ask_database_firewall() {
 configure_mysql() {
   echo "* Performing MySQL queries.."
 
+  password_input sqlpasswd "Password MySQL root account: " "Password cannot be empty"
+
   if [ "$CONFIGURE_DBEXTERNAL" == true ]; then
     echo "* Creating MySQL user..."
-    mysql -u root -e "CREATE USER '${MYSQL_DBHOST_USER}'@'${CONFIGURE_DBEXTERNAL_HOST}' IDENTIFIED BY '${MYSQL_DBHOST_PASSWORD}';"
+    mysql -u root -p${sqlpasswd} -e "CREATE USER '${MYSQL_DBHOST_USER}'@'${CONFIGURE_DBEXTERNAL_HOST}' IDENTIFIED BY '${MYSQL_DBHOST_PASSWORD}';"
 
     echo "* Granting privileges.."
-    mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_DBHOST_USER}'@'${CONFIGURE_DBEXTERNAL_HOST}' WITH GRANT OPTION;"
+    mysql -u root -p${sqlpasswd} -e "GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_DBHOST_USER}'@'${CONFIGURE_DBEXTERNAL_HOST}' WITH GRANT OPTION;"
   else
     echo "* Creating MySQL user..."
-    mysql -u root -e "CREATE USER '${MYSQL_DBHOST_USER}'@'127.0.0.1' IDENTIFIED BY '${MYSQL_DBHOST_PASSWORD}';"
+    mysql -u root -p${sqlpasswd} -e "CREATE USER '${MYSQL_DBHOST_USER}'@'127.0.0.1' IDENTIFIED BY '${MYSQL_DBHOST_PASSWORD}';"
 
     echo "* Granting privileges.."
-    mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_DBHOST_USER}'@'127.0.0.1' WITH GRANT OPTION;"
+    mysql -u root -p${sqlpasswd} -e "GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_DBHOST_USER}'@'127.0.0.1' WITH GRANT OPTION;"
   fi
 
   echo "* Flushing privileges.."
-  mysql -u root -e "FLUSH PRIVILEGES;"
+  mysql -u root -p${sqlpasswd} -e "FLUSH PRIVILEGES;"
 
   echo "* Changing MySQL bind address.."
 
