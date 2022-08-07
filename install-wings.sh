@@ -377,7 +377,7 @@ enable_docker() {
 install_golang() {
   if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
     if [ "$OS_VER_MAJOR" == "8" ] || [ "$OS_VER_MAJOR" == "9" ]; then
-      dnf -y -q install
+      dnf -y -q install upx
       rm -fr go.tar.gz
       curl -s -L -o go.tar.gz $GO_DL_URL
       rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz
