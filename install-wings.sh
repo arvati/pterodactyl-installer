@@ -364,6 +364,9 @@ yum_update() {
 
 dnf_update() {
   dnf -y upgrade
+  [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install epel-release
+  [ "$OS_VER_MAJOR" == "8" ] && dnf -q install -y oracle-epel-release-el8 https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+  [ "$OS_VER_MAJOR" == "9" ] && dnf -q install -y oracle-epel-release-el9 https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
 }
 
 enable_docker() {
@@ -374,7 +377,7 @@ enable_docker() {
 install_golang() {
   if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
     if [ "$OS_VER_MAJOR" == "8" ] || [ "$OS_VER_MAJOR" == "9" ]; then
-      dnf -y -q install upx
+      dnf -y -q install
       rm -fr go.tar.gz
       curl -s -L -o go.tar.gz $GO_DL_URL
       rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz
@@ -453,7 +456,7 @@ ptdl_dl() {
 
 wings_compile() {
   echo "* Compiling Pterodactyl Wings .. "
-  dnf install -y -q git
+  dnf install -y -q git upx
   rm -fr wings
   git clone "https://$WINGS_GITHUB_BASE.git" wings
   cd wings
@@ -668,13 +671,8 @@ letsencrypt() {
   if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
     apt-get -y install certbot python3-certbot-nginx socat
   elif [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
-    [ "$OS_VER_MAJOR" == "7" ] && yum -y -q install epel-release
     [ "$OS_VER_MAJOR" == "7" ] && yum -y install certbot python3-certbot-nginx socat
-
-    [ "$OS_VER_MAJOR" == "8" ] && dnf -q install -y oracle-epel-release-el8 https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
     [ "$OS_VER_MAJOR" == "8" ] && dnf -y -q install certbot python3-certbot-nginx socat
-
-    [ "$OS_VER_MAJOR" == "9" ] && dnf -q install -y oracle-epel-release-el9 https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
     [ "$OS_VER_MAJOR" == "9" ] && dnf -y -q install certbot python3-certbot-nginx socat
 
   else
