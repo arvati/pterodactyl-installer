@@ -58,6 +58,7 @@ WINGS_GITHUB_BASE="github.com/pterodactyl/wings"
 WINGS_DL_BASE_URL="https://$WINGS_GITHUB_BASE/releases/latest/download/wings_linux_"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/arvati/pterodactyl-installer/$GITHUB_SOURCE"
 GO_DL_URL="https://go.dev/dl/go1.18.4.linux-arm64.tar.gz"
+UPX_VERSION="v3.96"
 
 
 COLOR_RED='\033[0;31m'
@@ -374,10 +375,52 @@ enable_docker() {
   systemctl enable docker
 }
 
+get_github_download_URL() {
+  # Check for available versions. Defaults to latest if no valid version is found.
+  REPO=$1
+  OVERSION=$2
+  MATCH=$3
+  dnf -y -q install jq
+  LATEST_JSON=$(curl -Ls "https://api.github.com/repos/${REPO}/releases/latest")
+  RELEASES=$(curl -Ls "https://api.github.com/repos/${REPO}/releases")
+  if [ -z "${OVERSION}" ] || [ "${OVERSION}" == "latest" ]; then
+    DOWNLOAD_URL=$(echo ${LATEST_JSON} | jq .assets | jq -r .[].browser_download_url | grep -i ${MATCH}.tar.gz)
+  else
+    VERSION_CHECK=$(echo ${RELEASES} | jq -r --arg VERSION "v${OVERSION}" '.[] | select(.tag_name==$VERSION) | .tag_name')
+    if [ "v${OVERSION}" == "${VERSION_CHECK}" ]; then
+        DOWNLOAD_URL=$(echo ${RELEASES} | jq -r --arg VERSION "v${OVERSION}" '.[] | select(.tag_name==$VERSION) | .assets[].browser_download_url' | grep -i ${MATCH}.tar.gz)
+    else
+        echo -e "defaulting to latest release"
+        DOWNLOAD_URL=$(echo ${LATEST_JSON} | jq .assets | jq -r .[].browser_download_url | grep -i ${MATCH}.tar.gz)
+    fi
+  fi
+}
+
+install_upx() {
+  if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
+    if [ "$OS_VER_MAJOR" == "8" ] ; then
+        dnf -y -q install upx
+    elif [ "$OS_VER_MAJOR" == "9" ] ; then
+      if [ "$ARCH" == "aarch64" ]  || [ "$ARCH" == "arm64" ]; then
+        UPX_ARCH="arm64"
+      elif  [ "$ARCH" == "x86_64" ]  || [ "$ARCH" == "amd64" ]; then
+        UPX_ARCH="amd64"
+      fi
+      DOWNLOAD_URL="$(get_github_download_URL "upx/upx" $UPX_VERSION $UPX_ARCH)"
+      echo "Downloading ${DOWNLOAD_URL}"
+      
+      mkdir -p /tmp/upx
+      chmod -v 1777 /tmp/upx
+      curl -fL ${DOWNLOAD_URL} | tar -C /tmp/upx -xz
+      mv /tmp/upx/*/upx /usr/bin/upx
+      chmod +x /usr/bin/upx
+    fi
+  fi
+}
+
 install_golang() {
   if [ "$OS" == "centos" ] || [ "$OS" == "ol" ]; then
     if [ "$OS_VER_MAJOR" == "8" ] || [ "$OS_VER_MAJOR" == "9" ]; then
-      dnf -y -q install upx
       rm -fr go.tar.gz
       curl -s -L -o go.tar.gz $GO_DL_URL
       rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz
@@ -450,13 +493,14 @@ ptdl_dl() {
 
   chmod u+x /usr/local/bin/wings
   echo 'export PATH=$PATH:/usr/local/bin/wings' > /etc/profile.d/wings.sh
+  chmod u+x /etc/profile.d/wings.sh
 
   echo "* Done."
 }
 
 wings_compile() {
   echo "* Compiling Pterodactyl Wings .. "
-  dnf install -y -q git upx
+  dnf install -y -q git
   rm -fr wings
   git clone "https://$WINGS_GITHUB_BASE.git" wings
   cd wings
@@ -734,6 +778,7 @@ perform_install() {
 
   if [ "$COMPILE_WINGS" == true ]; then
     install_golang
+    install_upx
     wings_compile
   else
     ptdl_dl
