@@ -384,16 +384,16 @@ get_github_download_URL() {
   LATEST_JSON=$(curl -Ls "https://api.github.com/repos/${REPO}/releases/latest")
   RELEASES=$(curl -Ls "https://api.github.com/repos/${REPO}/releases")
   if [ -z "${OVERSION}" ] || [ "${OVERSION}" == "latest" ]; then
-    DOWNLOAD_URL=$(echo ${LATEST_JSON} | jq .assets | jq -r .[].browser_download_url | grep -i ${MATCH}.tar.gz)
+    DOWNLOAD_URL=$(echo ${LATEST_JSON} | jq .assets | jq -r .[].browser_download_url | grep -i ${MATCH})
   else
     VERSION_CHECK=$(echo ${RELEASES} | jq -r --arg VERSION "${OVERSION}" '.[] | select(.tag_name==$VERSION) | .tag_name')
     if [ "${OVERSION}" == "${VERSION_CHECK}" ]; then
-        DOWNLOAD_URL=$(echo ${RELEASES} | jq -r --arg VERSION "${OVERSION}" '.[] | select(.tag_name==$VERSION) | .assets[].browser_download_url' | grep -i ${MATCH}.tar.gz)
+        DOWNLOAD_URL=$(echo ${RELEASES} | jq -r --arg VERSION "${OVERSION}" '.[] | select(.tag_name==$VERSION) | .assets[].browser_download_url' | grep -i ${MATCH})
     else
-        DOWNLOAD_URL=$(echo ${LATEST_JSON} | jq .assets | jq -r .[].browser_download_url | grep -i ${MATCH}.tar.gz)
+        DOWNLOAD_URL=$(echo ${LATEST_JSON} | jq .assets | jq -r .[].browser_download_url | grep -i ${MATCH})
     fi
   fi
-  echo -e "${DOWNLOAD_URL}"
+  echo "${DOWNLOAD_URL}"
 }
 
 install_upx() {
@@ -407,7 +407,7 @@ install_upx() {
         UPX_ARCH="amd64"
       fi
       #UPX_VERSION="$(get_latest_release "upx/upx")"
-      DOWNLOAD_URL="$(get_github_download_URL "upx/upx" $UPX_VERSION $UPX_ARCH)"
+      DOWNLOAD_URL="$(get_github_download_URL "upx/upx" $UPX_VERSION ${UPX_ARCH}_linux.tar.xz)"
       echo "Downloading ${DOWNLOAD_URL}"
       
       mkdir -p /tmp/upx
