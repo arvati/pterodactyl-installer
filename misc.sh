@@ -141,12 +141,149 @@ cat /etc/pterodactyl/config.yml
 systemctl start wings
 sudo systemctl start docker
 
+sudo systemctl start nginx
+sudo systemctl start pteroq
+
 firewall-cmd --get-active-zones
+systemctl stop wings && docker network rm pterodactyl_nw && systemctl start wings
+/usr/local/bin/wings
 
 sudo firewall-cmd --get-zone-of-interface=pterodactyl0
 sudo firewall-cmd --zone=trusted --remove-interface=pterodactyl0
 sudo firewall-cmd --zone=trusted --remove-interface=pterodactyl0 --permanent
 sudo firewall-cmd --reload -q
+systemctl start wings
+
+firewall-cmd --permanent --zone=trusted --change-interface=pterodactyl0 -q
+firewall-cmd --zone=trusted --add-masquerade --permanent -q
+firewall-cmd --reload -q # Enable firewall
+
+# Increase size ORACLE INSTANCE BOOT DISK
+df -hT | grep mapper
+sudo pvs
+lsblk
+NAME               MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+sda                  8:0    0  100G  0 disk
+├─sda1               8:1    0  100M  0 part /boot/efi
+├─sda2               8:2    0    2G  0 part /boot
+└─sda3               8:3    0 44.5G  0 part
+  ├─ocivolume-root 252:0    0 29.5G  0 lvm  /
+  └─ocivolume-oled 252:1    0   15G  0 lvm  /var/oled
+
+sudo pvresize /dev/sda3
+sudo dnf -y install cloud-utils-growpart
+sudo growpart /dev/sda 3
+sudo pvs
+sudo vgs
+sudo lvextend -r -l +100%FREE /dev/ocivolume/root
+lsblk
+NAME               MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+sda                  8:0    0  100G  0 disk
+├─sda1               8:1    0  100M  0 part /boot/efi
+├─sda2               8:2    0    2G  0 part /boot
+└─sda3               8:3    0 97.9G  0 part
+  ├─ocivolume-root 252:0    0 82.9G  0 lvm  /
+  └─ocivolume-oled 252:1    0   15G  0 lvm  /var/oled
+
 
 
 curl -L -o /usr/local/bin/wings https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_arm64
+
+
+
+
+
+
+
+
+
+
+cat /etc/pterodactyl/config.yml
+debug: false
+app_name: Pterodactyl
+uuid: 
+token_id: 
+token: 
+api:
+  host: 0.0.0.0
+  port: 8080
+  ssl:
+    enabled: true
+    cert: /etc/letsencrypt/live/server..com/fullchain.pem
+    key: /etc/letsencrypt/live/server..com/privkey.pem
+  disable_remote_download: false
+  upload_limit: 100
+system:
+  root_directory: /var/lib/pterodactyl
+  log_directory: /var/log/pterodactyl
+  data: /var/lib/pterodactyl/volumes
+  archive_directory: /var/lib/pterodactyl/archives
+  backup_directory: /var/lib/pterodactyl/backups
+  tmp_directory: /tmp/pterodactyl
+  username: pterodactyl
+  timezone: GMT
+  user:
+    uid: 984
+    gid: 980
+  disk_check_interval: 150
+  activity_send_interval: 60
+  activity_send_count: 100
+  check_permissions_on_boot: true
+  enable_log_rotate: true
+  websocket_log_count: 150
+  sftp:
+    bind_address: 0.0.0.0
+    bind_port: 2022
+    read_only: false
+  crash_detection:
+    enabled: true
+    detect_clean_exit_as_crash: true
+    timeout: 60
+  backups:
+    write_limit: 0
+  transfers:
+    download_limit: 0
+docker:
+  network:
+    interface: 172.18.0.1
+    dns:
+    - 1.1.1.1
+    - 1.0.0.1
+    name: pterodactyl_nw
+    ispn: false
+    driver: bridge
+    network_mode: pterodactyl_nw
+    is_internal: false
+    enable_icc: true
+    network_mtu: 1500
+    interfaces:
+      v4:
+        subnet: 172.18.0.0/16
+        gateway: 172.18.0.1
+      v6:
+        subnet: fdba:17c8:6c94::/64
+        gateway: fdba:17c8:6c94::1011
+  domainname: ""
+  registries: {}
+  tmpfs_size: 100
+  container_pid_limit: 512
+  installer_limits:
+    memory: 1024
+    cpu: 100
+  overhead:
+    override: false
+    default_multiplier: 1.05
+    multipliers: {}
+  use_performant_inspect: true
+throttles:
+  enabled: true
+  lines: 2000
+  line_reset_interval: 100
+remote: https://host.vanaware.com
+remote_query:
+  timeout: 30
+  boot_servers_per_page: 50
+allowed_mounts: []
+allowed_origins: []
+allow_cors_private_network: false
+
