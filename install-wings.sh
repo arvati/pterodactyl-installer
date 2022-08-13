@@ -412,8 +412,8 @@ install_upx() {
       
       mkdir -p /tmp/upx
       chmod -v 1777 /tmp/upx
-      curl -fL ${DOWNLOAD_URL} | tar -C /tmp/upx -xz
-      mv /tmp/upx/*/upx /usr/bin/upx
+      curl -fL ${DOWNLOAD_URL} | tar -C /tmp/upx -xJ --strip-components=1
+      mv /tmp/upx/upx /usr/bin/upx
       chmod +x /usr/bin/upx
     fi
   fi
