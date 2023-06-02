@@ -1,3 +1,9 @@
+## list certificate
+
+```
+sudo sh /root/.acme.sh/acme.sh --list --force
+```
+
 ## force renew certificate
 
 ```
