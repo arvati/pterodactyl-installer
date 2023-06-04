@@ -21,3 +21,9 @@ sudo sh /root/.acme.sh/acme.sh --install-cronjob
 ```
 sudo systemctl restart wings
 ```
+
+
+## reload pteroq
+```
+sudo systemctl restart pteroq
+```
